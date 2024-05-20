@@ -11,33 +11,31 @@
 int main ( int argc, const char **argv )
 {
     
+    // Suppress compiler warnings
+    (void) argc;
+    (void) argv;
+
     // Initialized data
     ui_instance *p_ui_instance = 0;
     ui_window   *p_ui_window   = 0;
     ui_element  *p_ui_element  = 0;
 
-    // Initialize the UI library
-    if ( ui_init(&p_ui_instance, "") == 0 ) goto failed_to_init_ui;
-
     // Load a window from the filesystem
-    if ( load_window(&p_ui_window, "window.json") == 0 ) goto failed_to_load_window;
+    // if ( load_window(&p_ui_window, "window.json") == 0 ) goto failed_to_load_window;
 
     // Add the window to the instance
-    ui_append_window(p_ui_instance, p_ui_window);
+    // ui_append_window(p_ui_instance, p_ui_window);
 
     // UI Loop
-    while ( p_ui_instance->running )
-    {
+    // while ( p_ui_instance->running )
+    // {
         
-        // Process input
-        ui_process_input(p_ui_instance);
+    //     // Process input
+    //     ui_process_input(p_ui_instance);
 
-        // Draw windows
-        ui_draw(p_ui_instance);
-    }
-
-    // Exit the UI library
-    ui_exit(p_ui_instance);
+    //     // Draw windows
+    //     ui_draw(p_ui_instance);
+    // }
 
     // Success
     return EXIT_SUCCESS;

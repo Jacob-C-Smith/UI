@@ -1,12 +1,12 @@
 /** !
- * Main header for UI library
+ * Main header for ui library
 
- * @file UI/UI.h
+ * @file ui/ui.h
  * 
- * @author Jacob Smith,
+ * @author Jacob Smith
  */
 
-// Includes
+// Include guard
 #pragma once
 
 // Standard Library
@@ -15,19 +15,23 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+// dict module
+#include <dict/dict.h>
+
+// array module
+#include <dict/dict.h>
+
+// json module
+#include <json/json.h>
+
+// ui module
+#include <ui/typedef.h>
+
 // SDL
 #include <SDL.h>
 #undef main
 
-// JSON parser
-#include <json/json.h>
-#include <dict/dict.h>
-
-// UI 
-#include <ui/typedef.h>
-#include <ui/window.h>
-
-// Preprocessor constants
+// Preprocessor definitions
 #define UI_M1     0x01
 #define UI_M2     0x02
 #define UI_M3     0x04
@@ -38,32 +42,49 @@
 
 #define MAX_WINDOW_COUNT 16
 
+#define BUILD_SYNC_WITH_MONITOR
+#define BUILD_SYNC_WITH_MONITOR
+
 // Mouse event callback parameter
-struct ui_mouse_state_s {
+struct ui_mouse_state_s
+{
 
     // The position of the cursor
-    s32 x,
-        y;
+    s32 x, y;
     
     // Bitmask mouse keys and scroll wheel
     u8  button;
 };
 
 // UI Instance. Contains a list of windows and an active theme.
-struct UIInstance_s {
-    dict        *windows;
-    bool         running;
-    ui_window  *active_window,
-                *load_window,
-               **windows_list;
-    color        primary,
-                 background, 
-                 accent_1,
-                 accent_2,
-                 accent_3;
+struct ui_instance_s
+{
+    bool running;
+    //dict        *windows;
+    //ui_window  *active_window,
+    //            *load_window,
+    //           **windows_list;
+
+    struct
+    {
+        color primary,
+              background, 
+              accent_1,
+              accent_2,
+              accent_3;
+    } theme;
 };
 
-// Initializers
+// Initializer
+/** !
+ * This gets called at runtime before main. 
+ * 
+ * @param void
+ * 
+ * @return void
+ */
+DLLEXPORT void ui_init ( void ) __attribute__((constructor));
+
 /** !
  *  Initialize UI. If path is null, a config file will be loaded from the user's home directory. 
  *  If no config file exists, a default config file will be generated.
@@ -75,47 +96,7 @@ struct UIInstance_s {
  *
  *  @return 1 on success, 0 on error.
  */
-DLLEXPORT int ui_init ( ui_instance **pp_instance, const char *path );
-
-// ANSI colored prints
-/** !
- *  printf in ANSI blue
- *
- *  @param format : printf format text
- *  @param ...    : varadic arguments
- *
- *  @sa ui_print_warning
- *  @sa ui_print_error
- *
- *  @return 1 on success, 0 on error.
- */
-DLLEXPORT int ui_print_log ( const char* const format, ... );
-
-/** !
-  *  printf in ANSI yellow
-  *
-  *  @param format : printf format text
-  *  @param ...    : varadic arguments
-  * 
-  *  @sa ui_print_log
-  *  @sa ui_print_error
-  *
-  *  @return 1 on success, 0 on error.
-  */
-DLLEXPORT int ui_print_warning ( const char* const format, ... );
-
-/** !
-  *  printf in ANSI red
-  *
-  *  @param format : printf format text
-  *  @param ...    : varadic arguments
-  * 
-  *  @sa ui_print_log
-  *  @sa ui_print_warning
-  *
-  *  @return 1 on success, 0 on error.
-  */
-DLLEXPORT int ui_print_error ( const char* const format, ... );
+//DLLEXPORT int ui_init ( ui_instance **pp_instance, const char *path );
 
 // Text drawing
 /** !

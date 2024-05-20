@@ -11,18 +11,19 @@
 #include <ui/typedef.h>
 #include <ui/ui.h>
 
-#include <ui/button.h>
-//#include <ui/UICanvas.h>
-#include <ui/checkbox.h>
-//#include <ui/UIChart.h>
-#include <ui/dropdown.h>
-//#include <ui/image.h>
-#include <ui/radiobutton.h>
-#include <ui/slider.h>
-#include <ui/table.h>
-#include <ui/textinput.h>
+// #include <ui/button.h>
+// #include <ui/UICanvas.h>
+// #include <ui/checkbox.h>
+// #include <ui/UIChart.h>
+// #include <ui/dropdown.h>
+// #include <ui/image.h>
+// #include <ui/radiobutton.h>
+// #include <ui/slider.h>
+// #include <ui/table.h>
+// #include <ui/textinput.h>
 
-struct UIWindow_s {
+struct UIWindow_s
+{
 	bool               is_open,
 	                   drag;
 	char              *name,

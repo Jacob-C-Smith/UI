@@ -1,3 +1,11 @@
+/** !
+ * Type definitions for ui library
+
+ * @file ui/typedef.h
+ * 
+ * @author Jacob Smith
+ */
+
 // Include guard
 #pragma once
 
@@ -7,6 +15,24 @@
 #else
     #define DLLEXPORT
 #endif
+
+// Forward declarations
+struct ui_label_s;
+struct ui_button_s;
+struct ui_mouse_state_s;
+struct ui_canvas_s;
+struct ui_chart_s;
+struct ui_checkbox_s;
+struct ui_container_s;
+struct ui_dropdown_s;
+struct ui_image_s;
+struct ui_label_s;
+struct ui_radio_button_s;
+struct ui_slider_s;
+struct ui_text_input_s;
+struct ui_element_s;
+struct ui_window_s;
+struct ui_Instance_s;
 
 // Type definitions
 typedef unsigned char        u8;
@@ -25,72 +51,26 @@ typedef float                f32;
 typedef double               f64;
 typedef long     double      f80;
 
-// Color
-// R is bits 0-7, G is 8-15, B 16-23, A 24-31
-typedef u32 color;
+typedef struct
+{
+    u8 r : 8,
+       g : 8,
+       b : 8,
+       a : 8;    
+} color;
 
-// UI Structures
-struct UILabel_s;
-struct UIButton_s;
-struct ui_mouse_state_s;
-struct UICanvas_s;
-struct UIChart_s;
-struct UICheckbox_s;
-struct UIContainer_s;
-struct UIDropdown_s;
-struct UIImage_s;
-struct UILabel_s;
-struct UIRadioButton_s;
-struct UISlider_s;
-struct UITextInput_s;
-struct UIElement_s;
-struct UIWindow_s;
-struct UIInstance_s;
-
-// Mouse state type
-typedef struct ui_mouse_state_s ui_mouse_state;
-
-// UI Label type
-typedef struct UILabel_s ui_label;
-
-// UI Button type
-typedef struct UIButton_s ui_button;
-
-// UI Canvas type
-typedef struct UICanvas_s ui_canvas;
-
-// UI Chart type
-typedef struct UIChart_s ui_chart;
-
-// UI Table type
-typedef struct UITable_s ui_table;
-
-// UI Checkbox type
-typedef struct UICheckbox_s ui_checkbox;
-
-// UI Dropdown type
-typedef struct UIDropdown_s ui_dropdown;
-
-// UI Image type
-typedef struct UIImage_s ui_image;
-
-// UI Label type
-typedef struct UILabel_s ui_label;
-
-// UI Radio button type
-typedef struct UIRadioButton_s ui_radiobutton;
-
-// UI Slider type
-typedef struct UISlider_s ui_slider;
-
-// UI Text input type
-typedef struct UITextInput_s ui_textinput;
-
-// UI Element type
-typedef struct UIElement_s ui_element;
-
-// UI Window type
-typedef struct UIWindow_s ui_window;
-
-// UI Instance type
-typedef struct UIInstance_s ui_instance;
+typedef struct ui_label_s        ui_label;
+typedef struct ui_button_s       ui_button;
+typedef struct ui_mouse_state_s  ui_mouse_state;
+typedef struct ui_canvas_s       ui_canvas;
+typedef struct ui_chart_s        ui_chart;
+typedef struct ui_checkbox_s     ui_checkbox;
+typedef struct ui_container_s    ui_container;
+typedef struct ui_dropdown_s     ui_dropdown;
+typedef struct ui_image_s        ui_image;
+typedef struct ui_radio_button_s ui_radio_button;
+typedef struct ui_slider_s       ui_slider;
+typedef struct ui_text_input_s   ui_text_input;
+typedef struct ui_element_s      ui_element;
+typedef struct ui_window_s       ui_window;
+typedef struct ui_instance_s     ui_instance;

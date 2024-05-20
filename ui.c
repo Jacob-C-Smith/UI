@@ -1,5 +1,6 @@
 #include <ui/ui.h>
 
+// Data
 // Each u64 encodes an 8x8 glyph. ASCII values can be used to index characters. Add whatever you want so long as you keep the length under 255
 u64 font[137] = {
     0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
@@ -29,10 +30,76 @@ const char *default_config = "{\n"\
                              "    \"accent 3\"   : [ 0, 128, 255 ],\n"\
                              "    \"background\" : [ 255, 255, 255 ]\n"\ 
                              "}\n";
-const char *config_file_name = "/ui_config.json";
-
 ui_instance *active_instance = 0;
+static bool initialized = false;
 
+void ui_init ( void )
+{
+
+    // State check
+    if ( initialized ) return;
+
+    // Initialized data
+    FILE *p_config_file = (void *) 0;
+    const char *home = (void *) 0;
+    char _config_file_path[1023+1] = { 0 };
+
+    // Initialize modules
+    {
+
+        // Initialize the log library
+        log_init();
+
+        // Initialize the sync library
+        sync_init();
+
+        // Initialize the hash cache library
+        hash_cache_init();
+
+        // Initialize the array library
+        array_init();
+
+        // Initialize the dict library
+        dict_init();
+
+        // Initialize the queue library
+        queue_init();
+
+        // Initialize the json library
+        json_init();
+
+        // Initialize the parallel library
+        parallel_init();
+    }
+
+    // Initialize UI
+    {
+
+        // Locate the config file
+        home = getenv("HOME");
+
+        // Error check
+        if ( home == (void *) 0 ) goto failed_to_find_home;
+
+        // Build the config file path
+        snprintf(&_config_file_path, "%s/ui_config.json", home);
+
+
+    }
+
+    // Set the initialized flag
+    initialized = true;
+
+    // Done
+    return;
+
+    failed_to_find_home:
+    
+        // Error
+        return;
+}
+
+/*
 int ui_init ( ui_instance **pp_instance, const char *path )
 {
 
@@ -521,119 +588,6 @@ size_t ui_load_file(const char *path, void *buffer, bool binary)
     }
 }
 
-int ui_print_error(const char *const format, ...)
-{
-    
-    // Argument check
-    if ( format == (void *) 0 ) goto no_format;
-
-    // Varadic argument list for vprintf
-    va_list aList;
-    va_start(aList, format);
-
-    // Uses ANSI terminal escapes to set the color to red,
-    // print the message, and restore the color.
-    {
-        printf("\033[91m");
-        vprintf(format, aList);
-        printf("\033[0m");
-    }
-
-    va_end(aList);
-
-    // Success
-    return 1;
-
-    // Error handling
-    {
-        
-        // Argument errors
-        {
-            no_format:
-                #ifndef NDEBUG
-                    printf("Null pointer provided for parameter \"format\" in call to function \"%s\"\n", __FUNCTION__);
-                #endif
-
-                // Error
-                return 0;
-        }
-    }
-}
-
-int ui_print_warning(const char *const format, ...)
-{
-
-    // Argument check
-    if ( format == (void *) 0 ) goto no_format;
-
-    // Varadic argument list for vprintf
-    va_list aList;
-    va_start(aList, format);
-
-    // Uses ANSI terminal escapes to set the color to yellow,
-    // print the message, and restore the color.
-    printf("\033[93m");
-    vprintf(format, aList);
-    printf("\033[0m");
-
-    va_end(aList);
-
-    // Success
-    return 1;
-
-    // Error handling
-    {
-        
-        // Argument errors
-        {
-            no_format:
-                #ifndef NDEBUG
-                    printf("Null pointer provided for parameter \"format\" in call to function \"%s\"\n", __FUNCTION__);
-                #endif
-
-                // Error
-                return 0;
-        }
-    }
-}
-
-int ui_print_log(const char *const format, ...)
-{
-
-    // Argument check
-    if ( format == (void *) 0 ) goto no_format;
-
-    // Varadic argument list for vprintf
-    va_list aList;
-    va_start(aList, format);
-
-    // Uses ANSI terminal escapes to set the color to light blue,
-    // print the message, and restore the color.
-    printf("\033[94m");
-    vprintf(format, aList);
-    printf("\033[0m");
-
-    va_end(aList);
-
-    // Success
-    return 1;
-
-    // Error handling
-    {
-        
-        // Argument errors
-        {
-            no_format:
-                #ifndef NDEBUG
-                    printf("Null pointer provided for parameter \"format\" in call to function \"%s\"\n", __FUNCTION__);
-                #endif
-
-                // Error
-                return 0;
-        }
-    }
-}
-
 int ui_append_window(ui_instance *p_instance, ui_window *p_window)
 {
 
@@ -1038,3 +992,5 @@ int ui_exit ( ui_instance **pp_instance )
         }
     }
 }
+
+*/
