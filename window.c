@@ -136,102 +136,125 @@ int window_load_as_json ( ui_window **pp_window, char *text )
 	// Initialized data
 	ui_instance *p_instance    = ui_get_active_instance();
 	ui_window   *p_window      = 0;
+	dict        *p_dict        = 0;
     json_value  *p_value       = 0,
 	            *p_name        = 0,
 	            *p_title       = 0,
 	            *p_width       = 0,
-	            *p_height      = 0;//,
-	            //*p_elements    = 0;
+	            *p_height      = 0,
+	            *p_elements    = 0;
 
     // Parse the window file into a JSONValue
     if ( json_value_parse(text, 0, &p_value) == 0 ) goto failed_to_parse_json;
 
-    // Is the JSONValue the right type?
-    if ( p_value->type == JSON_VALUE_OBJECT )
-	{
-		
-        p_name     = dict_get(p_value->object, "name");
-        p_title    = dict_get(p_value->object, "title");
-        p_width    = dict_get(p_value->object, "width");
-        p_height   = dict_get(p_value->object, "height");
-        //p_elements = dict_get(p_value->object, "elements");
-		
-		// Check for missing parameters
-		if ( ! ( p_name && p_title && p_width && p_height ) ) goto missing_elements;
-    }
+    // Is the json value the right type?
+    if ( p_value->type != JSON_VALUE_OBJECT ) goto wrong_type;
+	
+	// Store the dictionary
+	p_dict = p_value->object;
 
-	// Construct the window
+	// Store properties
+	p_name     = dict_get(p_dict, "name");
+	p_title    = dict_get(p_dict, "title");
+	p_width    = dict_get(p_dict, "width");
+	p_height   = dict_get(p_dict, "height");
+	p_elements = dict_get(p_dict, "elements");
+	
+	// Error check
+	if ( ! ( p_name && p_title && p_width && p_height && p_elements ) ) goto missing_elements;
+
+	// Error check
+	if ( p_name->type     != JSON_VALUE_STRING  ) goto wrong_name_type;
+	if ( p_width->type    != JSON_VALUE_INTEGER ) goto wrong_width_type;
+	if ( p_height->type   != JSON_VALUE_INTEGER ) goto wrong_height_type;
+	if ( p_title->type    != JSON_VALUE_STRING  ) goto wrong_title_type;
+	if ( p_elements->type != JSON_VALUE_ARRAY   ) goto wrong_array_type;
+
+	// Allocate memory for a UI window
+	if ( window_create(&p_window) == 0 ) goto failed_to_allocate_window;
+
+	// Set the name
 	{
 
 		// Initialized data
-		size_t element_count = 0;
-		dict *elements = 0;
-		size_t element_data_max = 0;
-		ui_element *element_data = 0;
+		size_t len = strlen(p_name->string);
 
-		// Allocate memory for a UI window
-		if ( window_create(&p_window) == 0 ) goto failed_to_allocate_window;
+		// Error checking
+		if ( len < 1 )                         goto name_too_short;
+		if ( len > UI_WINDOW_NAME_LENGTH_MAX ) goto name_too_long;
 
-		// Populate window attributes
+		// Copy the name
+		strncpy(p_window->attributes._name, p_name->string, len);
+
+		// Store a null terminator
+		p_window->attributes._name[len] = '\0';
+	}
+
+	// Set the title
+	{
+
+		// Initialized data
+		size_t len = strlen(p_title->string);
+
+		// Error checking
+		if ( len < 1 )                         goto title_too_short;
+		if ( len > UI_WINDOW_NAME_LENGTH_MAX ) goto title_too_long;
+
+		// Copy the title
+		strncpy(p_window->attributes._title, p_title->string, len);
+
+		// Store a null terminator
+		p_window->attributes._name[len] = '\0';
+	}
+
+	// Set the width
+	p_window->attributes.width = p_width->integer;
+
+	// Set the height
+	p_window->attributes.height = p_height->integer;
+
+	// Create an SDL2 window
+	p_window->sdl2.window = SDL_CreateWindow(p_window->attributes._name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, p_window->attributes.width, p_window->attributes.height, SDL_WINDOW_SHOWN);
+
+	// These are required for window functionality
+	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+	SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+
+	// Create an SDL2 renderer
+	p_window->sdl2.renderer = SDL_CreateRenderer(p_window->sdl2.window, -1, SDL_RENDERER_ACCELERATED);
+
+	// Create a monitor
+	monitor_create(&p_window->_monitor);
+
+	// Construct window elements
+	{
+		
+		// Initialized data
+		size_t  element_count = 0;
+		array  *p_array       = p_elements->list;
+
+		// Store the size of the array
+		element_count = array_size(p_array);
+
+		dict_construct(&p_window->elements.lookup, element_count, 0);
+
+		// Construct each element
+		for (size_t i = 0; i < element_count; i++)
 		{
 			
-			// Error check
-			if ( p_name->type   != JSON_VALUE_STRING  ) goto wrong_name_type;
-			if ( p_width->type  != JSON_VALUE_INTEGER ) goto wrong_width_type;
-			if ( p_height->type != JSON_VALUE_INTEGER ) goto wrong_height_type;
-			if ( p_title->type  != JSON_VALUE_STRING  ) goto wrong_title_type;
+			// Initialized data
+			ui_element *p_element       = (void *) 0;
+			json_value *p_element_value = 0;
 
-			// Set the name
-			{
+			// Store the element
+			array_index(p_array, i, &p_element_value);
 
-				// Initialized data
-				size_t name_len = strlen(p_name->string);
+			// Construct the element
+			element_load_as_json_value(&p_element, p_element_value);
 
-				// Error checking
-				if ( name_len > UI_WINDOW_NAME_LENGTH_MAX ) goto name_too_long;
-				if ( name_len <                         1 ) goto name_too_short;
-
-				// Copy the name
-				strncpy(p_window->attributes._name, p_name->string, name_len);
-
-				// Store a null terminator
-				p_window->attributes._name[name_len] = '\0';
-			}
-
-			// Set the title
-			{
-
-				// Initialized data
-				size_t title_len = strlen(p_title->string);
-
-				// Error checking
-				if ( title_len > UI_WINDOW_NAME_LENGTH_MAX ) goto title_too_long;
-				if ( title_len <                         1 ) goto title_too_short;
-
-				// Copy the title
-				strncpy(p_window->attributes._title, p_title->string, title_len);
-			}
-
-			// Set the width
-			p_window->attributes.width = p_width->integer;
-
-			// Set the height
-			p_window->attributes.height = p_height->integer;
-
+			// Add the element to the window
+			dict_add(p_window->elements.lookup, &p_element->_name, p_element);
 		}
-
-		// Create an SDL2 window
-		p_window->sdl2.window = SDL_CreateWindow(p_window->attributes._name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, p_window->attributes.width, p_window->attributes.height, SDL_WINDOW_SHOWN);
-
-		// These are required for window functionality
-		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-		SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-
-		// Create an SDL2 renderer
-		p_window->sdl2.renderer = SDL_CreateRenderer(p_window->sdl2.window, -1, SDL_RENDERER_ACCELERATED);
-
-		// Create a monitor
-		monitor_create(&p_window->_monitor);
 	}
 	
 	// Return a pointer to the caller
@@ -260,8 +283,11 @@ int window_load_as_json ( ui_window **pp_window, char *text )
 	element_type_error:
 	missing_properties:
 	no_elements:
+	wrong_array_type:
 	no_name:
 	empty_name:
+	wrong_type:
+
 		// Error
 		return 0;
 		

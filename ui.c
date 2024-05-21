@@ -44,6 +44,7 @@ const char _default_config[] = "{\n"\
                                "}\n";
 ui_instance _active_instance = { 0 };
 static bool initialized = false;
+dict *p_element_infos = (void *) 0;
 
 // Function declarations
 size_t ui_load_file ( const char *path, void *buffer, bool binary );
@@ -374,10 +375,28 @@ void ui_init ( void )
     dict_construct(&_active_instance.windows.lookup, UI_INSTANCE_WINDOW_MAX, 0);
 
     // Initialize the element system
+    dict_construct(&p_element_infos, 64, 0);
+
+    // Add base elements
     {
 
-        // TODO
-        //
+        // Initialized data
+        ui_element_info _label = 
+        {
+            .load        = (fn_element_load)label_load_as_json_value,
+            .draw        = (fn_element_draw)label_draw,
+            .bounds      = (fn_element_bounds)label_in_bounds,
+            .destructor  = (fn_element_destructor)label_destroy,
+            .click       = (fn_element_click)label_click,
+            .hover       = (fn_element_hover)label_hover,
+            .release     = (fn_element_release)label_release,
+            .add_click   = (fn_element_add_click)label_add_click,
+            .add_hover   = (fn_element_add_hover)label_add_hover,
+            .add_release = (fn_element_add_release)label_add_release
+        };
+        
+        // Register the label element
+        ui_element_register("LABEL", _label);
     }
 
     // Set the initialized flag
@@ -398,7 +417,7 @@ void ui_init ( void )
         p_config_file = fopen(_config_file_path, "w+");
 
         // Write the config to the file
-        fwrite(_default_config, sizeof(char), sizeof(_default_config), p_config_file);
+        fwrite(_default_config, sizeof(char), sizeof(_default_config) - 1, p_config_file);
 
         // Reopen the file handle in read mode
         p_config_file = freopen(0, "r", p_config_file);
@@ -481,6 +500,34 @@ void ui_init ( void )
     }
 }
 
+int ui_element_register ( const char *const p_name, ui_element_info _element_info )
+{
+
+    // TODO: Argument check
+    //
+
+    // State check
+    if ( dict_get(p_element_infos, p_name) ) 
+
+        // Print a warning to standard out
+        log_warning("[ui] Element \"%s\" has already been registered. Overriding...\n", p_name);
+
+    // Initialized data
+    ui_element_info *p_element_info = UI_REALLOC(0, sizeof(ui_element_info));
+
+    // TODO: Error check
+    if ( p_element_info == (void *) 0 );
+    
+    // Copy the function pointers 
+    memcpy(p_element_info, &_element_info, sizeof(ui_element_info));
+
+    // Add the element info to the info lookup
+    dict_add(p_element_infos, p_name, p_element_info);
+
+    // Success
+    return 1;
+}
+
 int ui_window_run ( ui_window *p_window )
 {
 
@@ -541,7 +588,7 @@ int ui_window_add ( ui_window **pp_window, const char *const path, fn_window_con
     *pp_window = p_window;
 
     // Start a new thread for this window
-    parallel_thread_start(&p_window->p_thread, ui_window_run, p_window);
+    parallel_thread_start(&p_window->p_thread, (fn_parallel_task *)ui_window_run, p_window);
 
     // Success
     return 1;

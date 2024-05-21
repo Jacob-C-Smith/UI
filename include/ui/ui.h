@@ -35,6 +35,7 @@
 // ui module
 #include <ui/typedef.h>
 #include <ui/window.h>
+#include <ui/label.h>
 
 // SDL
 #include <SDL.h>
@@ -95,7 +96,20 @@ struct ui_mouse_state_s
     u8 button;
 };
 
-// UI Instance. Contains a list of windows and an active theme.
+struct ui_element_info_s
+{
+    fn_element_load        load;
+    fn_element_draw        draw;
+    fn_element_bounds      bounds;
+    fn_element_destructor  destructor;
+    fn_element_click       click;
+    fn_element_hover       hover;
+    fn_element_release     release;
+    fn_element_add_click   add_click;
+    fn_element_add_hover   add_hover;
+    fn_element_add_release add_release;
+};
+
 struct ui_instance_s
 {
     char _name[UI_INSTANCE_NAME_LENGTH_MAX];
@@ -130,20 +144,8 @@ struct ui_instance_s
 DLLEXPORT void ui_init ( void ) __attribute__((constructor));
 
 DLLEXPORT int ui_window_add ( ui_window **pp_window, const char *const path, fn_window_constructor pfn_window_constructor );
- 
 
-/** !
- *  Initialize UI. If path is null, a config file will be loaded from the user's home directory. 
- *  If no config file exists, a default config file will be generated.
- *
- *  @param pp_instance : Pointer to pointer to UI instance
- *  @param path        : Path to config file or null
- *
- *  @sa ui_exit
- *
- *  @return 1 on success, 0 on error.
- */
-//DLLEXPORT int ui_init ( ui_instance **pp_instance, const char *path );
+DLLEXPORT int ui_element_register ( const char *const p_name, ui_element_info _element_info );
 
 // Text drawing
 /** !
@@ -162,7 +164,6 @@ DLLEXPORT int ui_window_add ( ui_window **pp_window, const char *const path, fn_
   */
 DLLEXPORT int ui_draw_format_text ( ui_window *p_window, int x, int y, int size, const char* const format, ... );
 
-// Text drawing
 /** !
   *  Graphical puts
   *
@@ -178,6 +179,7 @@ DLLEXPORT int ui_draw_format_text ( ui_window *p_window, int x, int y, int size,
   */
 DLLEXPORT int ui_draw_text ( const char* const text, ui_window *p_window, int x, int y, int size );
 
+// Drawing
 /** !
   *  Draw a circle
   *
@@ -190,45 +192,6 @@ DLLEXPORT int ui_draw_text ( const char* const text, ui_window *p_window, int x,
   */
 DLLEXPORT int ui_draw_circle ( ui_window *p_window, int radius, int x_center, int y_center );
 
-// Window operations
-/** !
-  *  Append a window to an instance
-  *
-  *  @param instance : Pointer to instance
-  *  @param window   : The window to append
-  *
-  *  @return 1 on success, 0 on error.
-  */
-DLLEXPORT int ui_append_window ( ui_instance *p_instance, ui_window *p_window );
-
-/** !
-  *  Remove a window
-  *
-  *  @param instance : Pointer to instance
-  *  @param name     : The name of the window
-  *
-  *  @return 1 on success, 0 on error.
-  */
-DLLEXPORT ui_window *ui_remove_window ( ui_instance *p_instance, const char *name );
-
-/** !
-  *  Process active window input
-  *
-  *  @param instance : Pointer to instance
-  *
-  *  @return 1 on success, 0 on error.
-  */
-DLLEXPORT int ui_process_input ( ui_instance *p_instance );
-
-/** !
-  *  Draw the active window
-  *
-  *  @param instance : Pointer to instance
-  *
-  *  @return 1 on success, 0 on error.
-  */
-DLLEXPORT int ui_draw ( ui_instance *p_instance );
-
 // Image drawing
 /** !
   *  Get the active instance
@@ -237,7 +200,6 @@ DLLEXPORT int ui_draw ( ui_instance *p_instance );
   */
 DLLEXPORT ui_instance *ui_get_active_instance ( void );
 
-// Function declarations
 size_t ui_load_file ( const char *path, void *buffer, bool binary );
 
 // Exit

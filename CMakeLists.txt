@@ -30,7 +30,7 @@ else()
     #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -lrt -std=gnu99 -Wall -Wextra -Wpedantic -Weverything -Wno-declaration-after-statement -Ofast")
 
     # For GCC
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wextra -Wpedantic -Wno-declaration-after-statement -O3")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wextra -Wpedantic -Wno-declaration-after-statement -O3 -Wl,--no-as-needed")
     add_compile_definitions(__USE_POSIX199309)
 endif()
 
@@ -71,6 +71,19 @@ if ( NOT "${HAS_ARRAY}")
     if(NOT PROJECT_IS_TOP_LEVEL)
         set(HAS_ARRAY true PARENT_SCOPE)
         set(ARRAY_INCLUDE_DIR ${ARRAY_INCLUDE_DIR} PARENT_SCOPE)
+    endif()
+endif()
+
+# Find the hash cache module
+if ( NOT "${HAS_HASH_CACHE}")
+
+    # Add the hash cache directory
+    add_subdirectory(${CMAKE_SOURCE_DIR}/extern/hash-cache ${CMAKE_SOURCE_DIR}/build/hash-cache)
+
+    # Let any parent project know that this project has hash cache
+    if(NOT PROJECT_IS_TOP_LEVEL)
+        set(HAS_HASH_CACHE true PARENT_SCOPE)
+        set(HASH_CACHE_INCLUDE_DIR ${HASH_CACHE_INCLUDE_DIR} PARENT_SCOPE)
     endif()
 endif()
 
@@ -156,13 +169,18 @@ endif()
 
 # Add source to this project's executable.
 add_executable (ui_example "main.c")
-add_dependencies(ui_example ui parallel tuple json array dict hash_cache queue sync )
+add_dependencies(ui_example ui_canvas ui parallel tuple json array dict hash_cache queue sync )
 target_include_directories(ui_example PUBLIC include ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${UI_INCLUDE_DIR} ${ARRAY_INCLUDE_DIR} ${HASH_CACHE_INCLUDE_DIR} ${DICT_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${LOG_INCLUDE_DIR} ${PARALLEL_INCLUDE_DIR} ${SYNC_INCLUDE_DIR} ${TUPLE_INCLUDE_DIR}) 
-target_link_libraries(ui_example PUBLIC ui parallel tuple tuple json array dict hash_cache queue sync ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
+target_link_libraries(ui_example PUBLIC ui_canvas ui parallel tuple tuple json array dict hash_cache queue sync ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
+
+add_library (ui_canvas SHARED "canvas.c")       
+add_dependencies(ui_canvas ui parallel tuple json array dict hash_cache queue sync)
+target_include_directories(ui_canvas PUBLIC ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${UI_INCLUDE_DIR} ${ARRAY_INCLUDE_DIR} ${DICT_INCLUDE_DIR} ${HASH_CACHE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${LOG_INCLUDE_DIR} ${PARALLEL_INCLUDE_DIR} ${SYNC_INCLUDE_DIR} ${TUPLE_INCLUDE_DIR}) 
+target_link_libraries(ui_canvas PUBLIC ui parallel tuple json array dict hash_cache queue sync ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
 
 # Add source to this project's library
 #add_library (ui SHARED "ui.c" "fileselector.c" "window.c" "button.c" "image.c" "checkbox.c" "dropdown.c" "element.c" "radiobutton.c" "label.c" "slider.c" "textinput.c" "table.c") #      
-add_library (ui SHARED "ui.c" "window.c")       
+add_library (ui SHARED "ui.c" "window.c" "element.c" "label.c")       
 add_dependencies(ui parallel tuple json array dict hash_cache queue sync)
 target_include_directories(ui PUBLIC ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${UI_INCLUDE_DIR} ${ARRAY_INCLUDE_DIR} ${DICT_INCLUDE_DIR} ${HASH_CACHE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${LOG_INCLUDE_DIR} ${PARALLEL_INCLUDE_DIR} ${SYNC_INCLUDE_DIR} ${TUPLE_INCLUDE_DIR}) 
 target_link_libraries(ui PUBLIC parallel tuple json array dict hash_cache queue sync  ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})

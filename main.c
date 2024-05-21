@@ -14,6 +14,7 @@
 
 // ui
 #include <ui/ui.h>
+#include <ui/canvas.h>
 
 // Function declarations
 int setup_window ( ui_window *p_window );
@@ -39,8 +40,8 @@ int main ( int argc, const char **argv )
     ui_window_add(&p_ui_window1, "window1.json", setup_window);
 
     // Print information about the UI instance
-    ui_info(p_ui_instance);
-    
+    //ui_info(p_ui_instance);
+
     // UI Loop
     while (p_ui_window1->context.is_open)
     {
@@ -86,7 +87,9 @@ int setup_window ( ui_window *p_window )
 {
 
     // TODO: Set up the window
-
+    //
+    canvas_init();
+    
     // Success
     return 1;
 }

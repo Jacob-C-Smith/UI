@@ -30,6 +30,7 @@
 // ui module
 #include <ui/typedef.h>
 #include <ui/ui.h>
+#include <ui/element.h>
 
 // SDL
 #include <SDL.h>
@@ -57,15 +58,15 @@ struct ui_window_s
 	struct
 	{
 		size_t count, max;
-		dict              *elements;
-		ui_element      **element_data;
-		ui_element       *last;
+		dict        *lookup;
+		ui_element **data,
+		            *last;
 	} elements;
 	
 	struct
 	{
-		SDL_Window        *window;
-		SDL_Renderer      *renderer;		
+		SDL_Window   *window;
+		SDL_Renderer *renderer;		
 	} sdl2;
 	
 	parallel_thread *p_thread;

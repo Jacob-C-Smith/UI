@@ -10,16 +10,10 @@
 #include <ui/ui.h>
 #include <ui/typedef.h>
 
-struct UILabel_s
+struct ui_label_s
 {
     char    *text;
-    i32      x,
-             y,
-             width,
-             height,
-             size;
-    bool     hidden;
-    color    c;
+    i32      x, y, width, height, size;
     
     // Callbacks
     size_t   on_click_count,   on_click_max,
@@ -33,23 +27,38 @@ struct UILabel_s
 };
 
 // Allocators
-DLLEXPORT int  create_label              ( ui_label   **pp_label );
+/** !
+ * Allocate memory for a label
+ * 
+ * @param pp_label return
+ * 
+ * @return 1 on success, 0 on error
+ */
+DLLEXPORT int label_create ( ui_label **const pp_label );
 
 // Constructors
-DLLEXPORT int  load_label_as_json_value   ( ui_label  **pp_label, json_value     *p_value );
+/** !
+ * Construct a label from a json value
+ * 
+ * @param pp_label return
+ * @param p_value  the json value
+ * 
+ * @return 1 on success, 0 on error
+ */
+DLLEXPORT int label_load_as_json_value ( ui_label **const pp_label, const json_value *const p_value );
 
-// Drawer
-DLLEXPORT int  draw_label                 ( ui_window  *p_window, ui_label       *p_label );
+// Draw
+DLLEXPORT int  label_draw                 ( ui_window  *p_window, ui_label       *p_label );
 
 // Callbacks
-DLLEXPORT int  click_label                ( ui_label   *p_label, ui_mouse_state  mouse_state );
-DLLEXPORT int  hover_label                ( ui_label   *p_label, ui_mouse_state  mouse_state );
-DLLEXPORT int  release_label              ( ui_label   *p_label, ui_mouse_state  mouse_state );
+DLLEXPORT int  label_click                ( ui_label   *p_label, ui_mouse_state  mouse_state );
+DLLEXPORT int  label_hover                ( ui_label   *p_label, ui_mouse_state  mouse_state );
+DLLEXPORT int  label_release              ( ui_label   *p_label, ui_mouse_state  mouse_state );
 
 // Add callbacks
-DLLEXPORT int  add_click_callback_label   ( ui_label   *p_label, void           ( *callback ) ( ui_label*, ui_mouse_state) );
-DLLEXPORT int  add_hover_callback_label   ( ui_label   *p_label, void           ( *callback ) ( ui_label*, ui_mouse_state) );
-DLLEXPORT int  add_release_callback_label ( ui_label   *p_label, void           ( *callback ) ( ui_label*, ui_mouse_state) );
+DLLEXPORT int  label_add_click   ( ui_label   *p_label, void           ( *callback ) ( ui_label*, ui_mouse_state) );
+DLLEXPORT int  label_add_hover   ( ui_label   *p_label, void           ( *callback ) ( ui_label*, ui_mouse_state) );
+DLLEXPORT int  label_add_release ( ui_label   *p_label, void           ( *callback ) ( ui_label*, ui_mouse_state) );
 
 // Bounds
 DLLEXPORT bool label_in_bounds            ( ui_label   *p_label, ui_mouse_state  mouse_state );
@@ -58,4 +67,4 @@ DLLEXPORT bool label_in_bounds            ( ui_label   *p_label, ui_mouse_state 
 DLLEXPORT int  print_label_to_file        ( ui_label   *p_label, FILE *f, char *name );
 
 // Deallocators
-DLLEXPORT int destroy_label              ( ui_label   **pp_label );
+DLLEXPORT int label_destroy              ( ui_label   **pp_label );
