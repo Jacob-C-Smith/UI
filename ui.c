@@ -1,4 +1,16 @@
+/** !
+ * UI library
+ * 
+ * @file ui.c
+ * 
+ * @author Jacob Smith
+ */
+
+// Header
 #include <ui/ui.h>
+
+// Preprocessor definitions
+#define UI_CONFIG_FILE_LENGTH_MAX 2048
 
 // Data
 // Each u64 encodes an 8x8 glyph. ASCII values can be used to index characters. Add whatever you want so long as you keep the length under 255
@@ -22,16 +34,19 @@ u64 font[137] = {
     0x80C0E070371E1C08, 0x00001c3e3e3e1c00, 0x040C1C3C3C1C0C04, 0x0000ff4224180000, 0x7E7E7E7E7E7E3C18, 0x0709FF81818181FF, 0x784C46424242427E, 0x183C7E1818181818,
     0xC3E77e3c3c7eE7C3};
 
-const char *default_config = "{\n"\
-                             "    \"name\"       : \"Default color theme\",\n"\
-                             "    \"primary\"    : [ 0, 0, 0 ],\n"\
-                             "    \"accent 1\"   : [ 192, 192, 192 ],\n"\ 
-                             "    \"accent 2\"   : [ 128, 128, 128 ],\n"\
-                             "    \"accent 3\"   : [ 0, 128, 255 ],\n"\
-                             "    \"background\" : [ 255, 255, 255 ]\n"\ 
-                             "}\n";
-ui_instance *active_instance = 0;
+const char _default_config[] = "{\n"\
+                               "    \"name\"       : \"Default\",\n"\
+                               "    \"primary\"    : [ 0, 0, 0 ],\n"\
+                               "    \"accent 1\"   : [ 192, 192, 192 ],\n"\ 
+                               "    \"accent 2\"   : [ 128, 128, 128 ],\n"\
+                               "    \"accent 3\"   : [ 0, 128, 255 ],\n"\
+                               "    \"background\" : [ 255, 255, 255 ]\n"\ 
+                               "}\n";
+ui_instance _active_instance = { 0 };
 static bool initialized = false;
+
+// Function declarations
+size_t ui_load_file ( const char *path, void *buffer, bool binary );
 
 void ui_init ( void )
 {
@@ -43,6 +58,7 @@ void ui_init ( void )
     FILE *p_config_file = (void *) 0;
     const char *home = (void *) 0;
     char _config_file_path[1023+1] = { 0 };
+    char _config_file_contents[UI_CONFIG_FILE_LENGTH_MAX] = { 0 };
 
     // Initialize modules
     {
@@ -72,7 +88,7 @@ void ui_init ( void )
         parallel_init();
     }
 
-    // Initialize UI
+    // Locate the config file
     {
 
         // Locate the config file
@@ -82,127 +98,91 @@ void ui_init ( void )
         if ( home == (void *) 0 ) goto failed_to_find_home;
 
         // Build the config file path
-        snprintf(&_config_file_path, "%s/ui_config.json", home);
+        snprintf(&_config_file_path, 1023, "%s/ui_config.json", home);
 
+        // Open the config file
+        p_config_file = fopen(_config_file_path, "r");
 
+        // Error check
+        if ( p_config_file == (void *) 0 ) goto construct_config_file;
+
+        config_file_present:
+        
+        // Log the config file path to standard out
+        log_info("[ui] Loading config from \"%s\"\n", _config_file_path);
     }
-
-    // Set the initialized flag
-    initialized = true;
-
-    // Done
-    return;
-
-    failed_to_find_home:
-    
-        // Error
-        return;
-}
-
-/*
-int ui_init ( ui_instance **pp_instance, const char *path )
-{
-
-    // Argument check
-    if ( pp_instance == (void *) 0 ) goto no_instance;
-    if ( path        == (void *) 0 ) goto no_path;
-
-    // Uninitialized data
-    FILE *config_file;
-
-    // Initialized data
-    ui_instance *p_instance       = 0;
-    char        *appdata          = 0;
-    size_t       appdata_len      = 0;
-    char        *config_path      = 0,
-                *config_file_data = 0;
-    array       *primary          = 0,
-                *accent_1         = 0,
-                *accent_2         = 0,
-                *accent_3         = 0,
-                *background       = 0;
-    dict        *config_file_json = 0;
-    size_t       config_file_len  = 0;
-    json_value  *p_value          = 0,
-                *p_primary        = 0,
-                *p_accent_1       = 0,
-                *p_accent_2       = 0,
-                *p_accent_3       = 0,
-                *p_background     = 0;
-
-    // Find a directory for the config file
-    {
-
-        // Find a directoroy using environment variables
-        #ifdef _WIN64
-            appdata = getenv("APPDATA");
-        #else
-            appdata = getenv("HOME");
-        #endif
-
-        // Compute the length of the path
-        appdata_len = strlen(appdata) + strlen(config_file_name);
-
-        // Allocate memory for the path
-        config_path = calloc(appdata_len + 1, sizeof(u8));
-    }
-
-    // Error checking
-    if ( appdata == 0 ) goto no_app_data;
-
-    // Construct the path to the config file
-    sprintf(config_path, "%s/%s", appdata, config_file_name);
 
     // Load the config file
-    created_config_file:
     {
-        config_file_len = ui_load_file(config_path, 0, false);
+        
+        // Initialized data
+        size_t len = ui_load_file(_config_file_path, 0, false);
 
-        // Error checking
-        if ( config_file_len == 0 ) goto no_config_file;
+        // Error check
+        if ( len > UI_CONFIG_FILE_LENGTH_MAX - 1 ) goto config_file_too_long;
 
-        config_file_data = calloc(config_file_len, sizeof(u8));
-        ui_load_file(config_path, config_file_data, false);
+        // Load the file
+        ui_load_file(_config_file_path, _config_file_contents, false);
     }
 
-    // Parse the config file into a dictionary
-    if ( parse_json_value(config_file_data, 0, &p_value) == 0 ) goto failed_to_parse_json;
-
-    // Get properties from the dictionary
-    if ( p_value->type == JSON_VALUE_OBJECT )
+    // Parse the config file
     {
-
+        
         // Initialized data
-        dict *p_dict = p_value->object;
+        const json_value *p_value      = (void *) 0,
+                         *p_name       = (void *) 0,
+                         *p_primary    = (void *) 0,
+                         *p_accent_1   = (void *) 0,
+                         *p_accent_2   = (void *) 0,
+                         *p_accent_3   = (void *) 0,
+                         *p_background = (void *) 0;
+        dict *p_dict = 0;
 
+        // Parse the config file into a json value
+        if ( json_value_parse(&_config_file_contents, 0, &p_value) == 0 ) goto failed_to_parse_json;
+
+        // Error check
+        if ( p_value->type != JSON_VALUE_OBJECT ) goto wrong_type;
+
+        // Store the dictionary
+        p_dict = p_value->object;
+
+        // Store the properties
+        p_name       = dict_get(p_dict, "name");
         p_primary    = dict_get(p_dict, "primary");
         p_accent_1   = dict_get(p_dict, "accent 1");
         p_accent_2   = dict_get(p_dict, "accent 2");
         p_accent_3   = dict_get(p_dict, "accent 3");
         p_background = dict_get(p_dict, "background");
-    }
-
-    // Construct the instance
-    {
-
-        // Allocate memory for the instance
-        p_instance = calloc(1, sizeof(ui_instance));
 
         // Error check
-        if ( p_instance == (void *) 0 ) goto no_mem;
+        if ( (
+                p_name       &&
+                p_primary    &&
+                p_accent_1   &&
+                p_accent_2   &&
+                p_accent_3   &&
+                p_background
+        ) == false )
+            goto missing_properties;
 
-        // Initialize SDL
+        // Error check
+        if ( p_name->type != JSON_VALUE_STRING ) goto wrong_name_type;
+
+        // Store the name
         {
-            // Fixes blurry rendering on Mac OS
-            #ifdef __APPLE__
-                SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
-            #endif
 
-            // Initialize SDL
-            if ( SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0 ) goto failed_to_init_sdl2;
+            // Initialized data
+            size_t len = strlen(p_name->string);
+
+            // Error check
+            if ( len > UI_INSTANCE_NAME_LENGTH_MAX - 1 ) goto name_too_long;
+
+            // Copy the name
+            strncpy(_active_instance._name, p_name->string, len);
         }
 
-        // Set the theme colors
+        // Set the color theme
         {
 
             // Set the primary color
@@ -226,14 +206,14 @@ int ui_init ( ui_instance **pp_instance, const char *path )
                     array_get(p_primary->list, pp_array, &array_len);
                 }
 
-                // Iterate over each color
-                for (size_t i = 0; i < array_len; i++)
-
-                    // Set the color
-                    p_instance->primary |= pp_array[i]->integer << (i * 8);
-
-                // Opaque
-                p_instance->primary |= 0xff000000;
+                // Store the color
+                _active_instance.theme.primary = (color)
+                {
+                    .r = pp_array[0]->integer,
+                    .g = pp_array[1]->integer,
+                    .b = pp_array[2]->integer,
+                    .a = 0xFF
+                };
             }
             // Default
             else
@@ -260,14 +240,14 @@ int ui_init ( ui_instance **pp_instance, const char *path )
                     array_get(p_accent_1->list, pp_array, &array_len);
                 }
 
-                // Iterate over each color
-                for (size_t i = 0; i < array_len; i++)
-
-                    // Set the color
-                    p_instance->accent_1 |= pp_array[i]->integer << (i * 8);
-
-                // Opaque
-                p_instance->accent_1 |= 0xff000000;
+                // Store the color
+                _active_instance.theme.accent_1 = (color)
+                {
+                    .r = pp_array[0]->integer,
+                    .g = pp_array[1]->integer,
+                    .b = pp_array[2]->integer,
+                    .a = 0xFF
+                };
             }
             // Default
             else
@@ -293,14 +273,14 @@ int ui_init ( ui_instance **pp_instance, const char *path )
                     array_get(p_accent_2->list, pp_array, &array_len);
                 }
 
-                // Iterate over each color
-                for (size_t i = 0; i < array_len; i++)
-
-                    // Set the color
-                    p_instance->accent_2 |= pp_array[i]->integer << (i * 8);
-
-                // Opaque
-                p_instance->accent_2 |= 0xff000000;
+                // Store the color
+                _active_instance.theme.accent_2 = (color)
+                {
+                    .r = pp_array[0]->integer,
+                    .g = pp_array[1]->integer,
+                    .b = pp_array[2]->integer,
+                    .a = 0xFF
+                };
             }
             // Default
             else
@@ -326,14 +306,14 @@ int ui_init ( ui_instance **pp_instance, const char *path )
                     array_get(p_accent_3->list, pp_array, &array_len);
                 }
 
-                // Iterate over each color
-                for (size_t i = 0; i < array_len; i++)
-
-                    // Set the color
-                    p_instance->accent_3 |= pp_array[i]->integer << (i * 8);
-
-                // Opaque
-                p_instance->accent_3 |= 0xff000000;
+                // Store the color
+                _active_instance.theme.accent_3 = (color)
+                {
+                    .r = pp_array[0]->integer,
+                    .g = pp_array[1]->integer,
+                    .b = pp_array[2]->integer,
+                    .a = 0xFF
+                };
             }
             // Default
             else
@@ -360,270 +340,172 @@ int ui_init ( ui_instance **pp_instance, const char *path )
                     array_get(p_background->list, pp_array, &array_len);
                 }
 
-                // Iterate over each color
-                for (size_t i = 0; i < array_len; i++)
-
-                    // Set the color
-                    p_instance->background |= pp_array[i]->integer << (i * 8);
-
-                // Opaque
-                p_instance->background |= 0xff000000;
+                // Store the color
+                _active_instance.theme.background = (color)
+                {
+                    .r = pp_array[0]->integer,
+                    .g = pp_array[1]->integer,
+                    .b = pp_array[2]->integer,
+                    .a = 0xFF
+                };
             }
-            // Default
-            else
-                goto wrong_background_type;
-        }
 
-        // Set the running flag
-        p_instance->running = true;
+            // Default
+            else goto wrong_background_type;
+        }
+    
+        // Clean up
+        json_value_free(p_value);
     }
 
-    // Initialize UI subsystems
+    // Initialize SDL2
     {
 
-        // External functions
-        extern int init_element ( void );
+        // Fixes blurry rendering on Mac OS
+        #ifdef __APPLE__
+            SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
+        #endif
 
-        //////////////////////////////////
-        // Initialize the window system //
-        //////////////////////////////////
-
-        // Construct a dictionary for windows
-        dict_construct(&p_instance->windows, MAX_WINDOW_COUNT, 0);
-
-        // Allocate a list of windows
-        p_instance->windows_list = calloc(MAX_WINDOW_COUNT, sizeof(ui_window *));
-
-        // Initialize the element system
-        init_element();
+        // Initialize SDL
+        if ( SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0 ) goto failed_to_init_sdl2;
     }
 
-    // Set the active instance
-    active_instance = p_instance;
+    // Initialize the window system
+    dict_construct(&_active_instance.windows.lookup, UI_INSTANCE_WINDOW_MAX, 0);
 
-    // Return a pointer to the caller
-    *pp_instance = p_instance;
+    // Initialize the element system
+    {
 
-    // Clean up
-    free_json_value(p_value);
+        // TODO
+        //
+    }
 
-    // Success
-    return 1;
-    
-    failed_to_init_sdl2:
+    // Set the initialized flag
+    initialized = true;
+
+    // Set the running flag
+    _active_instance.running = true;
+
+    // Done
+    return;
+
+    construct_config_file:
+
+        // Write an error message to standard out
+        log_warning("[ui] Failed to find config file\n");
+
+        // Reopen the file handle in write mode
+        p_config_file = fopen(_config_file_path, "w+");
+
+        // Write the config to the file
+        fwrite(_default_config, sizeof(char), sizeof(_default_config), p_config_file);
+
+        // Reopen the file handle in read mode
+        p_config_file = freopen(0, "r", p_config_file);
+
+        // Write an error message to standard out
+        log_warning("[ui] Generated new config file at \"%s\"\n", _config_file_path);
+
+        // Done
+        goto config_file_present;
+
+    // TODO:
+    wrong_name_type:
+    name_too_long:
+    failed_primary:
     wrong_primary_type:
+    failed_accent_1:
     wrong_accent_1_type:
+    failed_accent_2:
     wrong_accent_2_type:
+    failed_accent_3:
     wrong_accent_3_type:
+    failed_background:
     wrong_background_type:
-        return 0;
+    failed_to_init_sdl2:
+        
+        // Abort
+        exit(EXIT_FAILURE);
 
     // Error handling
     {
 
-        // Argument errors
+        // Environment errors
         {
-            no_instance:
-                #ifndef NDEBUG
-                    ui_print_error("[UI] Null pointer provided for \"pp_instance\" in call to function \"%s\"\n", __FUNCTION__);
-                #endif
+            failed_to_find_home:
+            
+                // Write an error message to standard out
+                log_error("[ui] Failed to find home directory in call to function \"%s\"\n", __FUNCTION__);
 
-                // Error
-                return 0;
-
-            no_path:
-                #ifndef NDEBUG
-                    ui_print_error("[UI] Null pointer provided for \"path\" in call to function \"%s\"\n", __FUNCTION__);
-                #endif
-
-                // Error
-                return 0;
+                // Abort execution
+                exit(EXIT_FAILURE);
         }
 
-        // User errors
-        // Create a config file
-        no_config_file:
+        // json errors
         {
+            wrong_type:
 
-            // Open the file
-            config_file = fopen(config_path, "w+");
+                // Write an error message to standard out
+                log_error("[ui] Config file must be of type [ object ] in call to function \"%s\"\n", _config_file_path, __FUNCTION__);
 
-            // Write the default config
-            fwrite(default_config, 1, strlen(default_config), config_file);
+                // Abort execution
+                exit(EXIT_FAILURE);
 
-            // Flush the stream and close the file
-            fclose(config_file);
+            missing_properties:
 
-            // Try again
-            goto created_config_file;
+                // Write an error message to standard out
+                log_error("[ui] Config file is missing required properties in call to function \"%s\"\n", _config_file_path, __FUNCTION__);
+
+                // Abort execution
+                exit(EXIT_FAILURE);
         }
 
-        // UI Errors
-        {
-            no_app_data:
-                #ifndef NDEBUG
-                    ui_print_error("[UI] Failed to find a suitable directory for config file in call to function \"%s\"\n", __FUNCTION__);
-                #endif
-
-            // Error
-            return 0;
-        }
-
-        // Standard library errors
-        {
-            no_mem:
-                #ifndef NDEBUG
-                    ui_print_error("[Standard Library] Failed to allocate memory in call to function \"%s\"\n", __FUNCTION__);
-                #endif
-
-                // Error
-                return 0;
-        }
-
-        // JSON Errors
+        // ui errors
         {
             failed_to_parse_json:
-                #ifndef NDEBUG
-                    ui_print_error("[UI] Failed to parse JSON config file \"%s\" in call to function \"%s\"\n", config_path, __FUNCTION__);
-                #endif
 
-                // Error
-                return 0;
+                // Write an error message to standard out
+                log_error("[ui] Failed to parse config file \"%s\" in call to function \"%s\"\n", _config_file_path, __FUNCTION__);
 
-            failed_primary:
-                #ifndef NDEBUG
-                    ui_print_error("[UI] Failed to parse primary color from config file \"%s\" in call to function \"%s\"\n", config_path, __FUNCTION__);
-                #endif
+                // Abort execution
+                exit(EXIT_FAILURE);
 
-                // Error
-                return 0;
+            config_file_too_long:
 
-            failed_accent_1:
-                #ifndef NDEBUG
-                    ui_print_error("[UI] Failed to parse accent color 1 from config file \"%s\" in call to function \"%s\"\n", config_path, __FUNCTION__);
-                #endif
+                // Write an error message to standard out
+                log_error("[ui] Config file must be less than %d characters in call to function \"%s\"\n", UI_CONFIG_FILE_LENGTH_MAX, __FUNCTION__);
 
-                // Error
-                return 0;
-
-            failed_accent_2:
-                #ifndef NDEBUG
-                    ui_print_error("[UI] Failed to parse accent color 2 from config file \"%s\" in call to function \"%s\"\n", config_path, __FUNCTION__);
-                #endif
-
-                // Error
-                return 0;
-
-            failed_accent_3:
-                #ifndef NDEBUG
-                    ui_print_error("[UI] Failed to parse accent color 3 from config file \"%s\" in call to function \"%s\"\n", config_path, __FUNCTION__);
-                #endif
-
-                // Error
-                return 0;
-
-            failed_background:
-                #ifndef NDEBUG
-                    ui_print_error("[UI] Failed to parse background from config file \"%s\" in call to function \"%s\"\n", config_path, __FUNCTION__);
-                #endif
-
-                // Error
-                return 0;
+                // Abort execution
+                exit(EXIT_FAILURE);
         }
     }
 }
 
-size_t ui_load_file(const char *path, void *buffer, bool binary)
-{
-    
-    // Argument checking
-    if ( path == 0 ) goto no_path;
-
-    // Initialized data
-    size_t ret = 0;
-    FILE *f = fopen(path, (binary) ? "rb" : "r");
-
-    // Check if file is valid
-    if (f == NULL)
-        goto invalid_file;
-
-    // Find file size and prep for read
-    fseek(f, 0, SEEK_END);
-    ret = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    // Read to data
-    if (buffer)
-        ret = fread(buffer, 1, ret, f);
-
-    // We no longer need the file
-    fclose(f);
-
-    return ret;
-
-    // Error handling
-    {
-
-        // Argument errors
-        {
-            no_path:
-                #ifndef NDEBUG
-                    ui_print_error("[Standard library] Null path provided to funciton \"%s\"\n", __FUNCTION__);
-                #endif
-
-                // Error
-                return 0;
-        }
-
-        // Standard library errors
-        {
-            invalid_file:
-                #ifndef NDEBUG
-                    ui_print_error("[Standard library] Failed to load file \"%s\"\n", path);
-                #endif
-
-                // Error
-                return 0;
-        }
-    }
-}
-
-int ui_append_window(ui_instance *p_instance, ui_window *p_window)
+int ui_window_run ( ui_window *p_window )
 {
 
     // Argument check
-    if ( p_instance == (void *) 0 ) goto no_instance;
-    if ( p_window   == (void *) 0 ) goto no_window;
+    if ( p_window == (void *) 0 ) goto no_window;
 
-    // Add the window to the dictionary
-    dict_add(p_instance->windows, p_window->name, p_window);
-    dict_values(p_instance->windows, p_instance->windows_list);
-    
-    if(p_instance->active_window)
-        p_instance->active_window->last = 0;
+    // Main loop
+    while ( p_window->context.is_open )
+    {
 
-    // Update the active window
-    p_instance->active_window = p_window;
+        // Wait 
+        monitor_wait(&p_window->_monitor);
 
-    // There hasn't been a last element yet
-    p_instance->active_window->last = 0;
-    
+        // Repaint
+        window_draw(p_window);
+    }
+
     // Success
     return 1;
 
     // Error handling
     {
-        no_instance:
-            #ifndef NDEBUG
-                printf("[UI] Null pointer provided for \"p_instance\" in call to function \"%s\"\n", __FUNCTION__);
-            #endif
-
-            // Error
-            return 0;
-
         no_window:
             #ifndef NDEBUG
-                printf("[UI] Null pointer provided for \"p_window\" in call to function \"%s\"\n", __FUNCTION__);
+                log_error("[ui] Null pointer provided for parameter \"p_window\" in call to function \"%s\"\n", __FUNCTION__);
             #endif
 
             // Error
@@ -631,141 +513,67 @@ int ui_append_window(ui_instance *p_instance, ui_window *p_window)
     }
 }
 
-ui_window *ui_remove_window(ui_instance *p_instance, const char *name)
+int ui_window_add ( ui_window **pp_window, const char *const path, fn_window_constructor pfn_window_constructor )
 {
 
-    // Argument check
-    if ( p_instance   == (void *) 0 ) goto no_instance;
-    if ( name         == (void *) 0 ) goto no_name;
-    if ( strlen(name) ==          0 ) goto empty_name;
-
     // Initialized data
-    size_t      window_count = 0;
-    ui_window *ret          = 0;
+    ui_window *p_window = (void *) 0;
 
-    // Remove the specified window
-    dict_pop(p_instance->windows, name, &ret);
-    memset( p_instance->windows_list,0,window_count*sizeof(void *));
-    dict_values(p_instance->windows, p_instance->windows_list);
-    window_count = dict_values(p_instance->windows, 0);
+    // Load the ui window
+    if ( window_load(&p_window, path) == 0 ) goto failed_to_load_window;
 
-    p_instance->active_window = 0;
+    // Call the user's setup
+    if ( pfn_window_constructor(p_window) == 0 ) goto failed_to_set_up_window;
 
-    if ( window_count == 0 ) 
-        p_instance->running = false;
+    // Set the open flag
+    p_window->context.is_open = true;
 
-    // Return the window (for deallocation)
-    return ret;
+    // Store the window
+    _active_instance.windows._list[_active_instance.windows.count] = p_window;
+
+    // Register the window
+    dict_add(_active_instance.windows.lookup, p_window->attributes._name, p_window);
+
+    // Update the active window
+    _active_instance.windows.active = p_window;
+
+    // Return a pointer to the caller
+    *pp_window = p_window;
+
+    // Start a new thread for this window
+    parallel_thread_start(&p_window->p_thread, ui_window_run, p_window);
+
+    // Success
+    return 1;
 
     // Error handling
     {
-        no_instance:
-        no_name:
-        empty_name:
-        empty_window_name:
-            return 0;
-    }
-}
 
-int ui_process_input ( ui_instance *p_instance )
-{
-
-    // Argument check
-    if ( p_instance == (void *) 0 ) goto no_instance;
-
-    // Initialized data
-    size_t window_count = dict_values(p_instance->windows, 0);
-    
-    // Iterate over each window
-    for (size_t i = 0; i < window_count; i++)
-    {
-
-        // Check for a window
-        if (p_instance->windows_list[i])
+        // ui error
         {
+            failed_to_load_window:
+                #ifndef NDEBUG
+                    log_error("[ui] Failed to load window in call to function \"%s\"\n", __FUNCTION__);
+                #endif
 
-            // Check if the window should close
-            if (p_instance->windows_list[i]->is_open == false)
-            {
-                ui_window *w = ui_remove_window(p_instance, p_instance->windows_list[i]->name);
-                if (w)
-                    destroy_window(w);
-                if (dict_values(p_instance->windows, 0))
-                {
-                    p_instance->active_window = p_instance->windows_list[dict_values(p_instance->windows, 0) - 1];
-                    SDL_ShowWindow(p_instance->active_window->window);
+                // Error
+                return 0;
+        }
 
-                    SDL_RaiseWindow(p_instance->active_window->window);
-                }
-                continue;
-            }
-            
-            // Focus
-            if ( SDL_GetWindowFlags(p_instance->windows_list[i]->window) & SDL_WINDOW_INPUT_FOCUS )
-            {
-                p_instance->active_window = p_instance->windows_list[i];
-            }
+        // User error
+        {
+            failed_to_set_up_window:
+                #ifndef NDEBUG
+                    log_error("[ui] User provided setup function returned an erroneous value in call to function \"%s\"\n", __FUNCTION__);
+                #endif
 
-            // Process the input
-            process_window_input(p_instance->active_window);
+                // Error
+                return 0;
         }
     }
-
-    // Success
-    return 1;
-
-    // Error handling
-    {
-        no_instance:
-            #ifndef NDEBUG
-                ui_print_error("[UI] Null pointer provided for \"p_instance\" in call to function \"%s\"\n", __FUNCTION__);
-            #endif
-            
-            // Error 
-            return 0;
-    }
 }
 
-int ui_draw ( ui_instance *p_instance )
-{
-
-    // Argument check
-    if ( p_instance == (void *)0 ) goto no_instance;
-
-    // Allocate for a list of element pointers
-    size_t window_count = dict_values(p_instance->windows, 0);
-
-    // Iterate over each window
-    for (size_t i = 0; i < window_count; i++)
-    {
-
-        // Draw the window
-        draw_window(p_instance->windows_list[i]);
-    }
-
-    // Success
-    return 1;
-
-    // Error handling
-    {
-        no_instance:
-            #ifndef NDEBUG
-                ui_print_error("[UI] Null pointer provided for \"p_instance\" in call to function \"%s\"\n", __FUNCTION__);
-            #endif
-            
-            // Error 
-            return 0;
-    }
-}
-
-ui_instance *ui_get_active_instance ( void )
-{
-
-    // Success
-    return active_instance;
-}
-
-int ui_draw_format_text ( const char *const format, ui_window *p_window, int x, int y, int size, ... )
+int ui_draw_format_text ( ui_window *p_window, int x, int y, int size, const char *const format, ... )
 {
 
     // Argument check
@@ -838,7 +646,7 @@ void ui_draw_char(char c, ui_window *p_window, int x, int y, int size)
                     for (s32 j = 0; j < size; j++)
 
                         // Draw the pixel
-                        SDL_RenderDrawPoint(p_window->renderer, w + i, h + j);
+                        SDL_RenderDrawPoint(p_window->sdl2.renderer, w + i, h + j);
 
             // Draw the next part of the glyph
             glyph >>= 1;
@@ -896,7 +704,7 @@ int ui_draw_text(const char *const text, ui_window *p_window, int x, int y, int 
     }
 }
 
-int ui_draw_circle(int radius, ui_window *p_window, int x_center, int y_center)
+int ui_draw_circle(ui_window *p_window, int radius, int x_center, int y_center)
 {
 
     // Argument check
@@ -914,14 +722,14 @@ int ui_draw_circle(int radius, ui_window *p_window, int x_center, int y_center)
     while (x >= y)
     {
         //  Each of the following renders an octant of the circle
-        SDL_RenderDrawPoint(p_window->renderer, x_center + x, y_center - y);
-        SDL_RenderDrawPoint(p_window->renderer, x_center + x, y_center + y);
-        SDL_RenderDrawPoint(p_window->renderer, x_center - x, y_center - y);
-        SDL_RenderDrawPoint(p_window->renderer, x_center - x, y_center + y);
-        SDL_RenderDrawPoint(p_window->renderer, x_center + y, y_center - x);
-        SDL_RenderDrawPoint(p_window->renderer, x_center + y, y_center + x);
-        SDL_RenderDrawPoint(p_window->renderer, x_center - y, y_center - x);
-        SDL_RenderDrawPoint(p_window->renderer, x_center - y, y_center + x);
+        SDL_RenderDrawPoint(p_window->sdl2.renderer, x_center + x, y_center - y);
+        SDL_RenderDrawPoint(p_window->sdl2.renderer, x_center + x, y_center + y);
+        SDL_RenderDrawPoint(p_window->sdl2.renderer, x_center - x, y_center - y);
+        SDL_RenderDrawPoint(p_window->sdl2.renderer, x_center - x, y_center + y);
+        SDL_RenderDrawPoint(p_window->sdl2.renderer, x_center + y, y_center - x);
+        SDL_RenderDrawPoint(p_window->sdl2.renderer, x_center + y, y_center + x);
+        SDL_RenderDrawPoint(p_window->sdl2.renderer, x_center - y, y_center - x);
+        SDL_RenderDrawPoint(p_window->sdl2.renderer, x_center - y, y_center + x);
 
         if (error <= 0)
         {
@@ -957,34 +765,117 @@ int ui_draw_circle(int radius, ui_window *p_window, int x_center, int y_center)
     }
 }
 
-int ui_exit ( ui_instance **pp_instance )
+ui_instance *ui_get_active_instance ( void )
 {
 
-    // Argument check
-    if ( pp_instance == (void *)0 ) goto no_instance;
+    // Success
+    return &_active_instance;
+}
+
+void ui_info ( ui_instance *p_instance )
+{
+
+    // Print the name of the UI instance
+    log_info(" - UI info - \n");
+
+    // Print the color theme
+    log_info("    Theme: \"%s\"\n", p_instance->_name);
+
+    // Print the UI theme
+    log_info(
+        "         - primary   : #%02x%02x%02x\n",
+        p_instance->theme.primary.r,
+        p_instance->theme.primary.g,
+        p_instance->theme.primary.b
+    );
+    log_info(
+        "         - accent 1  : #%02x%02x%02x\n",
+        p_instance->theme.accent_1.r,
+        p_instance->theme.accent_1.g,
+        p_instance->theme.accent_1.b
+    );
+    log_info(
+        "         - accent 2  : #%02x%02x%02x\n",
+        p_instance->theme.accent_2.r,
+        p_instance->theme.accent_2.g,
+        p_instance->theme.accent_2.b
+    );
+    log_info(
+        "         - accent 3  : #%02x%02x%02x\n",
+        p_instance->theme.accent_3.r,
+        p_instance->theme.accent_3.g,
+        p_instance->theme.accent_3.b
+    );
+    log_info(
+        "         - background: #%02x%02x%02x\n",
+        p_instance->theme.background.r,
+        p_instance->theme.background.g,
+        p_instance->theme.background.b
+    );
+
+    // Print window information
+    log_info("    Windows [%d]:\n", 2);
+
+    // Done
+    return;
+}
+
+void ui_exit ( )
+{
+
+    // Print a message to standard out
+    log_info("[ui] Shutting down\n");
+
+    // Done
+    return;
+}
+
+size_t ui_load_file ( const char *path, void *buffer, bool binary )
+{
+    
+    // Argument checking
+    if ( path == 0 ) goto no_path;
 
     // Initialized data
-    ui_instance *p_instance = *pp_instance;
+    size_t ret = 0;
+    FILE *f = fopen(path, (binary) ? "rb" : "r");
 
-    // TODO: Fix
-    // Destroy the windows
-    //dict_free_clear(p_instance->windows, destroy_window);
-    dict_destroy(&p_instance->windows);
+    // Check if file is valid
+    if ( f == NULL ) goto invalid_file;
 
-    // Free the instance
-    free(p_instance);
+    // Find file size and prep for read
+    fseek(f, 0, SEEK_END);
+    ret = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    // Read to data
+    if ( buffer ) ret = fread(buffer, 1, ret, f);
+
+    // We no longer need the file
+    fclose(f);
 
     // Success
-    return 1;
+    return ret;
 
     // Error handling
     {
 
         // Argument errors
         {
-            no_instance:
+            no_path:
                 #ifndef NDEBUG
-                    printf("[UI] Null pointer provided for \"pp_instance\" in call to function \"%s\"\n", __FUNCTION__);
+                    log_error("[Standard library] Null path provided to funciton \"%s\"\n", __FUNCTION__);
+                #endif
+
+                // Error
+                return 0;
+        }
+
+        // Standard library errors
+        {
+            invalid_file:
+                #ifndef NDEBUG
+                    log_error("[Standard library] Failed to load file \"%s\". %s\n",path, strerror(errno));
                 #endif
 
                 // Error
@@ -992,5 +883,3 @@ int ui_exit ( ui_instance **pp_instance )
         }
     }
 }
-
-*/

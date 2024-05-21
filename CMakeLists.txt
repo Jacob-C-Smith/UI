@@ -42,6 +42,25 @@ if (${IS_DEBUG_BUILD})
     add_compile_definitions(NDEBUG)
 endif()
 
+# Build sync with semaphore
+add_compile_definitions(BUILD_SYNC_WITH_SEMAPHORE)
+
+# Build sync with monitor
+add_compile_definitions(BUILD_SYNC_WITH_MONITOR)
+
+# Find the log module
+if ( NOT "${HAS_LOG}")
+
+    # Add the log directory
+    add_subdirectory(${CMAKE_SOURCE_DIR}/extern/log ${CMAKE_SOURCE_DIR}/build/log)
+
+    # Let any parent project know that this project has log
+    if(NOT PROJECT_IS_TOP_LEVEL)
+        set(HAS_LOG true PARENT_SCOPE)
+        set(LOG_INCLUDE_DIR ${LOG_INCLUDE_DIR} PARENT_SCOPE)
+    endif()
+endif()
+
 # Find the array module
 if ( NOT "${HAS_ARRAY}")
 
@@ -81,19 +100,6 @@ if ( NOT "${HAS_JSON}")
     endif()
 endif()
 
-# Find the log module
-if ( NOT "${HAS_LOG}")
-
-    # Add the log directory
-    add_subdirectory(${CMAKE_SOURCE_DIR}/extern/log ${CMAKE_SOURCE_DIR}/build/log)
-
-    # Let any parent project know that this project has log
-    if(NOT PROJECT_IS_TOP_LEVEL)
-        set(HAS_LOG true PARENT_SCOPE)
-        set(LOG_INCLUDE_DIR ${LOG_INCLUDE_DIR} PARENT_SCOPE)
-    endif()
-endif()
-
 # Find the parallel module
 if ( NOT "${HAS_PARALLEL}")
 
@@ -117,19 +123,6 @@ if ( NOT "${HAS_SYNC}")
     if(NOT PROJECT_IS_TOP_LEVEL)
         set(HAS_SYNC true PARENT_SCOPE)
         set(SYNC_INCLUDE_DIR ${SYNC_INCLUDE_DIR} PARENT_SCOPE)
-    endif()
-endif()
-
-# Find the table module
-if ( NOT "${HAS_TABLE}")
-
-    # Add the table directory
-    add_subdirectory(${CMAKE_SOURCE_DIR}/extern/table ${CMAKE_SOURCE_DIR}/build/table)
-
-    # Let any parent project know that this project has table
-    if(NOT PROJECT_IS_TOP_LEVEL)
-        set(HAS_TABLE true PARENT_SCOPE)
-        set(TABLE_INCLUDE_DIR ${TABLE_INCLUDE_DIR} PARENT_SCOPE)
     endif()
 endif()
 
@@ -163,27 +156,13 @@ endif()
 
 # Add source to this project's executable.
 add_executable (ui_example "main.c")
-add_dependencies(ui_example ui tuple json array dict table crypto sync )
-target_include_directories(ui_example PUBLIC include ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/extern/tuple/include/ ${CMAKE_SOURCE_DIR}/extern/json/include/ ${CMAKE_SOURCE_DIR}/extern/array/include/ ${CMAKE_SOURCE_DIR}/extern/dict/include/) 
-IF(WIN32)
-    target_link_libraries(ui_example PUBLIC ui tuple tuple json array dict table crypto sync  PRIVATE SDL2_image::SDL2_image ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
-ELSEIF(LINUX)
-    target_link_libraries(ui_example PUBLIC ui tuple tuple json array dict table crypto sync  ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
-ELSEIF(APPLE)
-
-ENDIF(WIN32)
-
+add_dependencies(ui_example ui parallel tuple json array dict hash_cache queue sync )
+target_include_directories(ui_example PUBLIC include ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${UI_INCLUDE_DIR} ${ARRAY_INCLUDE_DIR} ${HASH_CACHE_INCLUDE_DIR} ${DICT_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${LOG_INCLUDE_DIR} ${PARALLEL_INCLUDE_DIR} ${SYNC_INCLUDE_DIR} ${TUPLE_INCLUDE_DIR}) 
+target_link_libraries(ui_example PUBLIC ui parallel tuple tuple json array dict hash_cache queue sync ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
 
 # Add source to this project's library
 #add_library (ui SHARED "ui.c" "fileselector.c" "window.c" "button.c" "image.c" "checkbox.c" "dropdown.c" "element.c" "radiobutton.c" "label.c" "slider.c" "textinput.c" "table.c") #      
-add_library (ui SHARED "ui.c")       
-add_dependencies(ui tuple json array dict table crypto sync)
-target_include_directories(ui PUBLIC include ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/extern/tuple/include/ ${CMAKE_SOURCE_DIR}/extern/json/include/ ${CMAKE_SOURCE_DIR}/extern/array/include/ ${CMAKE_SOURCE_DIR}/extern/dict/include/) 
-IF(WIN32)
-    target_link_libraries(ui PUBLIC tuple json array dict table crypto sync PRIVATE SDL2_image::SDL2_image ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
-ELSEIF(LINUX)
-    target_link_libraries(ui PUBLIC tuple json array dict table crypto sync  ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
-ELSEIF(APPLE)
-
-ENDIF(WIN32)
-
+add_library (ui SHARED "ui.c" "window.c")       
+add_dependencies(ui parallel tuple json array dict hash_cache queue sync)
+target_include_directories(ui PUBLIC ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${UI_INCLUDE_DIR} ${ARRAY_INCLUDE_DIR} ${DICT_INCLUDE_DIR} ${HASH_CACHE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${LOG_INCLUDE_DIR} ${PARALLEL_INCLUDE_DIR} ${SYNC_INCLUDE_DIR} ${TUPLE_INCLUDE_DIR}) 
+target_link_libraries(ui PUBLIC parallel tuple json array dict hash_cache queue sync  ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})

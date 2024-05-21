@@ -15,6 +15,9 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+// sync module
+#include <sync/sync.h>
+
 // dict module
 #include <dict/dict.h>
 
@@ -24,8 +27,14 @@
 // json module
 #include <json/json.h>
 
+// parallel module
+#include <parallel/parallel.h>
+#include <parallel/thread.h>
+#include <parallel/schedule.h>
+
 // ui module
 #include <ui/typedef.h>
+#include <ui/window.h>
 
 // SDL
 #include <SDL.h>
@@ -40,10 +49,40 @@
 #define UI_SWUP   0x20
 #define UI_SWDOWN 0x40
 
-#define MAX_WINDOW_COUNT 16
+#define UI_INSTANCE_NAME_LENGTH_MAX 255 + 1
+#define UI_INSTANCE_WINDOW_MAX      16
 
 #define BUILD_SYNC_WITH_MONITOR
 #define BUILD_SYNC_WITH_MONITOR
+
+// Set the reallocator for the dict module
+#ifdef DICT_REALLOC
+    #undef DICT_REALLOC
+    #define DICT_REALLOC(p, sz) realloc(p, sz)
+#endif
+
+// Set the reallocator for the array module
+#ifdef ARRAY_REALLOC
+    #undef ARRAY_REALLOC
+    #define ARRAY_REALLOC(p, sz) realloc(p, sz)
+#endif
+
+// Set the reallocator for the json module
+#ifdef JSON_REALLOC
+    #undef JSON_REALLOC
+    #define JSON_REALLOC(p, sz) realloc(p, sz)
+#endif
+
+// Set the reallocator for the parallel module
+#ifdef PARALLEL_REALLOC
+    #undef PARALLEL_REALLOC
+    #define PARALLEL_REALLOC(p, sz) realloc(p, sz)
+#endif
+
+// Memory management macro
+#ifndef UI_REALLOC
+    #define UI_REALLOC(p, sz) realloc(p,sz)
+#endif
 
 // Mouse event callback parameter
 struct ui_mouse_state_s
@@ -53,17 +92,22 @@ struct ui_mouse_state_s
     s32 x, y;
     
     // Bitmask mouse keys and scroll wheel
-    u8  button;
+    u8 button;
 };
 
 // UI Instance. Contains a list of windows and an active theme.
 struct ui_instance_s
 {
+    char _name[UI_INSTANCE_NAME_LENGTH_MAX];
     bool running;
-    //dict        *windows;
-    //ui_window  *active_window,
-    //            *load_window,
-    //           **windows_list;
+
+    struct 
+    {
+        size_t     count;
+        dict      *lookup;
+        ui_window *active,
+                  *_list[UI_INSTANCE_WINDOW_MAX];
+    } windows;
 
     struct
     {
@@ -84,6 +128,9 @@ struct ui_instance_s
  * @return void
  */
 DLLEXPORT void ui_init ( void ) __attribute__((constructor));
+
+DLLEXPORT int ui_window_add ( ui_window **pp_window, const char *const path, fn_window_constructor pfn_window_constructor );
+ 
 
 /** !
  *  Initialize UI. If path is null, a config file will be loaded from the user's home directory. 
@@ -113,7 +160,7 @@ DLLEXPORT void ui_init ( void ) __attribute__((constructor));
   *
   *  @return 1 on success, 0 on error.
   */
-DLLEXPORT int ui_draw_format_text ( const char* const format, ui_window *p_window, int x, int y, int size, ... );
+DLLEXPORT int ui_draw_format_text ( ui_window *p_window, int x, int y, int size, const char* const format, ... );
 
 // Text drawing
 /** !
@@ -141,7 +188,7 @@ DLLEXPORT int ui_draw_text ( const char* const text, ui_window *p_window, int x,
   *
   *  @return 1 on success, 0 on error.
   */
-DLLEXPORT int ui_draw_circle ( int radius, ui_window *p_window, int x, int y );
+DLLEXPORT int ui_draw_circle ( ui_window *p_window, int radius, int x_center, int y_center );
 
 // Window operations
 /** !
@@ -190,24 +237,15 @@ DLLEXPORT int ui_draw ( ui_instance *p_instance );
   */
 DLLEXPORT ui_instance *ui_get_active_instance ( void );
 
-// File I/O
-/** !
-  *  Load a file
-  *
-  *  @param path   : File path
-  *  @param buffer : Pointer to buffer 
-  *  @param binary : fopen mode is "rb" if true else "r"
-  * 
-  *  @return 1 on success, 0 on error.
-  */
-DLLEXPORT size_t ui_load_file ( const char *path, void *buffer, bool binary );
+// Function declarations
+size_t ui_load_file ( const char *path, void *buffer, bool binary );
 
 // Exit
 /** !
-  *  Shutdown the UI
+  * This gets called at runtime after main. 
   *
-  *  @param instance : Pointer to instance
+  *  @param void
   *
-  *  @return 1 on success, 0 on error.
+  *  @return void
   */
-DLLEXPORT int ui_exit ( ui_instance **pp_instance );
+DLLEXPORT void ui_exit ( void ) __attribute__((destructor));

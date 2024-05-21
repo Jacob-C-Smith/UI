@@ -1,13 +1,13 @@
 #include <ui/window.h>
 
-int create_window ( ui_window **pp_window )
+int window_create ( ui_window **pp_window )
 {
 
 	// Argument check
 	if ( pp_window == (void *) 0 ) goto no_window;
 
 	// Initialized data
-	ui_window *p_window = calloc(1, sizeof(ui_window));
+	ui_window *p_window = UI_REALLOC(0, sizeof(ui_window));
 
 	// Check memory
 	if ( p_window == (void *) 0 ) goto no_mem;
@@ -25,7 +25,7 @@ int create_window ( ui_window **pp_window )
 		{
 			no_window:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Window] Null pointer provided for \"p_window\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[ui] [window] Null pointer provided for \"p_window\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -36,46 +36,40 @@ int create_window ( ui_window **pp_window )
 		{
 			no_mem:
 				#ifndef NDEBUG
-					ui_print_error("[Standard Library] Failed to allocate memory in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[Standard Library] Failed to allocate memory in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error 
 				return 0;
 		}
-
-
 	}
 }
 
-int load_window ( ui_window **pp_window, const char *path )
+int window_load ( ui_window **pp_window, const char *p_path )
 {
 
 	// Argument check
-	if( path      == (void *) 0 ) goto no_path;
+	if( p_path    == (void *) 0 ) goto no_path;
 	if( pp_window == (void *) 0 ) goto no_window;
 
 	// Initialized data
-	size_t  len  = ui_load_file(path, 0, false);
-	char   *data = calloc(len, sizeof(u8));
+	size_t  len  = ui_load_file(p_path, 0, false);
+	char   *data = UI_REALLOC(0, len * sizeof(u8));
 
 	// Error checking
 	if ( data == (void *) 0 ) goto no_mem;
 
 	// Load the file
-	if ( ui_load_file(path, data, false) == 0 ) goto failed_to_load_file;
+	if ( ui_load_file(p_path, data, false) == 0 ) goto failed_to_load_file;
 	
-	// Load the window as JSON text
-	if ( load_window_as_json(pp_window, data) == 0 ) goto failed_to_load_window;
+	// Load the window as json text
+	if ( window_load_as_json(pp_window, data) == 0 ) goto failed_to_load_window;
 	
-	// Clean the scope
-	free(data);
+	// Cleanup
+	UI_REALLOC(data, 0);
 	
 	// Success
 	return 1;
-
-	failed_to_load_file:
-	failed_to_load_window:
-		return 0;
 
 	// Error handling
 	{
@@ -84,7 +78,7 @@ int load_window ( ui_window **pp_window, const char *path )
 		{
 			no_window:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Window] Null pointer provided for \"window\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[ui] [window] Null pointer provided for \"pp_window\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -92,7 +86,7 @@ int load_window ( ui_window **pp_window, const char *path )
 
 			no_path:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Window] Null pointer provided for \"path\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[ui] [window] Null pointer provided for \"p_path\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -104,16 +98,35 @@ int load_window ( ui_window **pp_window, const char *path )
         {
             no_mem:
                 #ifndef NDEBUG
-                    ui_print_error("[Standard Library] Failed to allocate memory in call to function \"%s\"\n", __FUNCTION__);
+                    log_error("[Standard Library] Failed to allocate memory in call to function \"%s\"\n", __FUNCTION__);
                 #endif
 
                 // Error
                 return 0;
         }
+
+		// ui errors
+		{
+			failed_to_load_file:
+                #ifndef NDEBUG
+                    log_error("[ui] [window] Failed to load file in call to function \"%s\"\n", __FUNCTION__);
+                #endif
+
+                // Error
+                return 0;
+
+			failed_to_load_window:
+                #ifndef NDEBUG
+                    log_error("[ui] [window] Failed to load window in call to function \"%s\"\n", __FUNCTION__);
+                #endif
+
+                // Error
+                return 0;
+		}
 	}
 }
 
-int load_window_as_json ( ui_window **pp_window, char *text )
+int window_load_as_json ( ui_window **pp_window, char *text )
 {
 
 	// Argument check
@@ -123,15 +136,15 @@ int load_window_as_json ( ui_window **pp_window, char *text )
 	// Initialized data
 	ui_instance *p_instance    = ui_get_active_instance();
 	ui_window   *p_window      = 0;
-    json_value   *p_value       = 0,
-	             *p_name        = 0,
-	             *p_title       = 0,
-	             *p_width       = 0,
-	             *p_height      = 0,
-	             *p_elements    = 0;
+    json_value  *p_value       = 0,
+	            *p_name        = 0,
+	            *p_title       = 0,
+	            *p_width       = 0,
+	            *p_height      = 0;//,
+	            //*p_elements    = 0;
 
     // Parse the window file into a JSONValue
-    if ( parse_json_value(text, 0, &p_value) == 0 ) goto failed_to_parse_json;
+    if ( json_value_parse(text, 0, &p_value) == 0 ) goto failed_to_parse_json;
 
     // Is the JSONValue the right type?
     if ( p_value->type == JSON_VALUE_OBJECT )
@@ -141,154 +154,84 @@ int load_window_as_json ( ui_window **pp_window, char *text )
         p_title    = dict_get(p_value->object, "title");
         p_width    = dict_get(p_value->object, "width");
         p_height   = dict_get(p_value->object, "height");
-        p_elements = dict_get(p_value->object, "elements");
+        //p_elements = dict_get(p_value->object, "elements");
 		
 		// Check for missing parameters
-		if ( ! ( p_name && p_title && p_width && p_height && p_elements ) ) goto missing_elements;
+		if ( ! ( p_name && p_title && p_width && p_height ) ) goto missing_elements;
     }
 
 	// Construct the window
 	{
 
 		// Initialized data
-		char   *name  = 0,
-		       *title = 0;
-		signed  width  = 0,
-		        height = 0;
 		size_t element_count = 0;
-		SDL_Window   *window   = 0;
-		SDL_Renderer *renderer = 0;
 		dict *elements = 0;
 		size_t element_data_max = 0;
 		ui_element *element_data = 0;
 
 		// Allocate memory for a UI window
-		if ( create_window(&p_window) == 0 ) goto failed_to_allocate_window;
+		if ( window_create(&p_window) == 0 ) goto failed_to_allocate_window;
 
-		// Set the name
-		if ( p_name->type == JSON_VALUE_STRING )
+		// Populate window attributes
 		{
+			
+			// Error check
+			if ( p_name->type   != JSON_VALUE_STRING  ) goto wrong_name_type;
+			if ( p_width->type  != JSON_VALUE_INTEGER ) goto wrong_width_type;
+			if ( p_height->type != JSON_VALUE_INTEGER ) goto wrong_height_type;
+			if ( p_title->type  != JSON_VALUE_STRING  ) goto wrong_title_type;
 
-			// Initialized data
-			size_t name_len = strlen(p_name->string);
+			// Set the name
+			{
 
-			// Allocate memory for the name
-			name = calloc(name_len + 1, sizeof(u8));
+				// Initialized data
+				size_t name_len = strlen(p_name->string);
 
-			// Error checking
-			if ( name == (void *) 0 ) goto no_mem;
+				// Error checking
+				if ( name_len > UI_WINDOW_NAME_LENGTH_MAX ) goto name_too_long;
+				if ( name_len <                         1 ) goto name_too_short;
 
-			// Copy the name
-			strncpy(name, p_name->string, name_len);
-		}
-		// Default
-		else
-			goto wrong_name_type;
+				// Copy the name
+				strncpy(p_window->attributes._name, p_name->string, name_len);
 
-		// Set the width
-		if ( p_width->type == JSON_VALUE_INTEGER)
-			width = p_width->integer;
-		else
-			goto wrong_width_type;
-		
-		// Set the height
-		if ( p_height->type == JSON_VALUE_INTEGER)
-			height = p_height->integer;
-		else
-			goto wrong_height_type;
+				// Store a null terminator
+				p_window->attributes._name[name_len] = '\0';
+			}
 
-		// Set the window title
-		if ( p_title->type == JSON_VALUE_STRING )
-		{
+			// Set the title
+			{
 
-			// Initialized data
-			size_t title_len = strlen(p_title->string);
+				// Initialized data
+				size_t title_len = strlen(p_title->string);
 
-			// Allocate memory for the title
-			title = calloc(title_len + 1, sizeof(u8));
+				// Error checking
+				if ( title_len > UI_WINDOW_NAME_LENGTH_MAX ) goto title_too_long;
+				if ( title_len <                         1 ) goto title_too_short;
 
-			// Error checking
-			if ( title == (void *) 0 ) goto no_mem;
+				// Copy the title
+				strncpy(p_window->attributes._title, p_title->string, title_len);
+			}
 
-			// Copy the title
-			strncpy(title, p_title->string, title_len);
+			// Set the width
+			p_window->attributes.width = p_width->integer;
+
+			// Set the height
+			p_window->attributes.height = p_height->integer;
+
 		}
 
 		// Create an SDL2 window
-		window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_BORDERLESS | SDL_WINDOW_SHOWN);
+		p_window->sdl2.window = SDL_CreateWindow(p_window->attributes._name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, p_window->attributes.width, p_window->attributes.height, SDL_WINDOW_SHOWN);
 
 		// These are required for window functionality
 		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 		SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
 		// Create an SDL2 renderer
-		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+		p_window->sdl2.renderer = SDL_CreateRenderer(p_window->sdl2.window, -1, SDL_RENDERER_ACCELERATED);
 
-		*p_window = (ui_window)
-		{
-			.is_open  = true,
-			.drag     = false,
-			.name     = name,
-			.title    = title,
-			.width    = width,
-			.height   = height,
-			.rx       = 0,
-			.ry       = 0,
-			.last     = 0,
-			.window   = window,
-			.renderer = renderer
-		};
-
-		// Load the window elements
-		if ( p_elements->type == JSON_VALUE_ARRAY )
-		{
-
-			// Initialized data	
-			json_value **pp_elements = 0;
-
-			// Get the contents of the array
-			{
-				array_get(p_elements->list, 0, &element_count);
-				pp_elements = calloc(element_count+1, sizeof(json_value *));
-				array_get(p_elements->list, pp_elements, &element_count);
-			}
-			
-			// Set the load window
-			p_instance->load_window = p_window;
-			
-			// Set the element max and the element array
-			element_data_max = element_count;
-			element_data = calloc(element_count+1, sizeof(ui_element *));
-
-			// Construct a dictionary to contain the elements
-			dict_construct(&elements, element_count, 0);
-
-			p_window->element_data_max = element_data_max;
-			p_window->elements = elements;
-			p_window->element_data = element_data;
-
-			// Iterate over each element
-			for (size_t i = 0; i < element_count; i++)
-			{
-
-				// Initialized data
-				json_value *p_element = pp_elements[i];
-				ui_element *constructed_element = 0;
-
-				if ( load_element_as_json_value(&constructed_element, p_element) == 0) goto failed_to_load_element;
-
-				append_element_to_window(p_window, constructed_element);
-				
-			}
-			
-			// Clean up
-			free(pp_elements);
-			
-			// Clear the instance's reference to the loading window
-			p_instance->load_window = 0;
-		}
-
-		
+		// Create a monitor
+		monitor_create(&p_window->_monitor);
 	}
 	
 	// Return a pointer to the caller
@@ -297,6 +240,7 @@ int load_window_as_json ( ui_window **pp_window, char *text )
 	// Success
 	return 1;
 	
+	// TODO: 
 	missing_elements:
 	wrong_name_type:
 	failed_to_allocate_window:
@@ -305,7 +249,22 @@ int load_window_as_json ( ui_window **pp_window, char *text )
 	no_mem:
 	failed_to_load_element:
 	wrong_height_type:
-
+	wrong_title_type:
+	name_too_long:
+	name_too_short:
+	title_too_long:
+	title_too_short:
+	name_type_error:
+	width_type_error:
+	height_type_error:
+	element_type_error:
+	missing_properties:
+	no_elements:
+	no_name:
+	empty_name:
+		// Error
+		return 0;
+		
 	// Error handling
 	{
 
@@ -313,7 +272,7 @@ int load_window_as_json ( ui_window **pp_window, char *text )
 		{
 			no_window:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Window] Null pointer provided for parameter \"pp_window\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Window] Null pointer provided for parameter \"pp_window\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -321,47 +280,76 @@ int load_window_as_json ( ui_window **pp_window, char *text )
 
 			no_text:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Window] Null pointer provided for parameter \"text\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Window] Null pointer provided for parameter \"text\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
 				return 0;
 		}
 
-		// JSON type errors
+		// json errors
 		{
-			#ifndef NDEBUG
-				name_type_error:
-				width_type_error:
-				height_type_error:
-				element_type_error:
-
-					// Error
-					return 0;
-			#endif
-		}
-
-		// Constructor errors
-		{
-			#ifndef NDEBUG
-				missing_properties:
-					return 0;
-			#endif
-		}
-
-		// Missing data
-		{
-			#ifndef NDEBUG
-			// TODO: Print an error for each branch
-				no_elements:
-				no_name:
-				empty_name:
-					return 0;
-			#endif
+			
 		}
 	}
 }
  
+int window_draw ( const ui_window *const p_window )
+{
+
+	// Argument check
+	if ( p_window == (void *)0 ) goto no_window;
+
+	// Initialized data
+	ui_instance *instance = ui_get_active_instance();
+
+	// Clear the window
+	SDL_SetRenderDrawColor(
+		p_window->sdl2.renderer,
+		(u8)instance->theme.background.r,
+		(u8)instance->theme.background.g,
+		(u8)instance->theme.background.b,
+		0
+	);
+	SDL_RenderClear(p_window->sdl2.renderer);
+	
+	SDL_SetRenderDrawColor(
+		p_window->sdl2.renderer,
+		(u8)instance->theme.primary.r,
+		(u8)instance->theme.primary.g,
+		(u8)instance->theme.primary.b,
+		0
+	);
+	ui_draw_text("Hello, world!", p_window, 16, 16, 2);
+
+	// Draw UI elements
+	if ( p_window->elements.count )
+	{
+
+		// Iterate over element list
+		for (size_t i = 0; i < p_window->elements.count; i++)
+
+			// Draw each element
+			;//draw_element(p_window, p_window->elements.data[i]);
+
+		// Redraw the last element (to avoid overdraw)
+		//if ( p_window->last )
+		//	draw_element(p_window, p_window->last);
+
+	}
+
+	// Success
+	return 1;
+
+	// TODO: Error handling
+	{
+		no_mem:
+		no_window:
+			return 0;
+	}
+}
+
+/*
 int append_element_to_window ( ui_window *p_window, ui_element *element )
 {
 
@@ -434,7 +422,7 @@ int set_file_drop_operation ( ui_window *p_window, int (*callback_function)(ui_w
 		{
 			no_window:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Window] Null pointer provided for parameter \"p_window\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Window] Null pointer provided for parameter \"p_window\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -442,7 +430,7 @@ int set_file_drop_operation ( ui_window *p_window, int (*callback_function)(ui_w
 
 			no_callback_function:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Window] Null pointer provided for parameter \"callback_function\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Window] Null pointer provided for parameter \"callback_function\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -452,114 +440,7 @@ int set_file_drop_operation ( ui_window *p_window, int (*callback_function)(ui_w
 	}
 }
 
-int draw_window ( ui_window *p_window )
-{
 
-	// Argument check
-	if ( p_window == (void *)0 ) goto no_window;
-
-	// State check
-	if ( p_window->drag )
-
-		// Success
-		return 1;
-
-	// Initialized data
-	ui_instance *instance = ui_get_active_instance();
-	int w   = 0,
-		h   = 0,
-		t_1 = 0,
-		t_2 = 0;
-	SDL_Rect r = { 0,0,0,0 };
-
-	size_t len   = strlen(p_window->title),
-		   g_len = len * 8;
-
-	dict *elements = p_window->elements;
-
-
-	// Clear the window
-	SDL_SetRenderDrawColor(p_window->renderer, (u8)instance->background, (u8)(instance->background >> 8), (u8)(instance->background >> 16), 0);
-	(p_window->renderer);
-	SDL_RenderClear(p_window->renderer);
-	
-	// Window parameters
-	{
-		SDL_GetWindowSize(p_window->window, &w, &h);
-
-		// Spacing 
-		t_1 = (((w - 48) / 2) - (g_len / 2)),
-		t_2 = (((w - 48) / 2) + (g_len / 2));
-		r.x = w - 48, r.y = 0, r.w = 29, r.h = 11;
-	}
-
-	// Draw window borders
-	{
-		SDL_SetRenderDrawColor(p_window->renderer, (u8)instance->primary, (u8)(instance->primary >> 8), (u8)(instance->primary >> 16), 0);
-		SDL_RenderDrawLine(p_window->renderer, 0, 5, 0, h - 1);
-		SDL_RenderDrawLine(p_window->renderer, w - 1, 5, w - 1, h - 1);
-		SDL_RenderDrawLine(p_window->renderer, 0, h - 1, w - 1, h - 1);
-	}
-
-	// Draw the top window border
-	{
-		SDL_RenderDrawLine(p_window->renderer, 0, 5, t_1 - 2, 5);
-		SDL_RenderDrawLine(p_window->renderer, t_1 - 2, 0, t_1 - 2, 10);
-		SDL_RenderDrawLine(p_window->renderer, w - 1, 5, t_2 + 2, 5);
-		SDL_RenderDrawLine(p_window->renderer, t_2 + 2, 0, t_2 + 2, 10);
-		SDL_RenderFillRect(p_window->renderer, &r);
-	}
-
-	// Draw the window title
-	ui_draw_text(p_window->title, p_window, t_1 + 1, 0, 1);
-
-	// Draw the red box in the top right of the window
-	{
-
-		// Adjust the rectangle
-		r.x++, r.y++, r.w -= 2, r.h -= 2;
-			
-		// In focus
-		if (instance->active_window == p_window)
-			SDL_SetRenderDrawColor(p_window->renderer, 0xff, 0, 0, 0);
-
-		// Out of focus
-		else
-			SDL_SetRenderDrawColor(p_window->renderer, 0xc0, 0xc0, 0xc0, 0);
-
-		// Draw the box
-		SDL_RenderFillRect(p_window->renderer, &r);
-	}
-
-	// Draw UI elements
-	if ( p_window->element_count )
-	{
-
-		// Iterate over element pointer list
-		for (size_t i = 0; i < p_window->element_count; i++)
-
-			// Draw each element
-			draw_element(p_window, p_window->element_data[i]);
-
-		// Redraw the last element (to avoid overdraw)
-		if ( p_window->last )
-			draw_element(p_window, p_window->last);
-
-	}
-
-	// Present the window
-	SDL_RenderPresent(p_window->renderer);
-
-	// Success
-	return 1;
-
-	// TODO: Error handling
-	{
-		no_mem:
-		no_window:
-			return 0;
-	}
-}
 
 int process_window_input ( ui_window *p_window )
 {
@@ -585,15 +466,15 @@ int process_window_input ( ui_window *p_window )
 
 		case SDL_KEYDOWN:
 		{
-			/*const  u8* keyboardState = SDL_GetKeyboardState(NULL);
+			// const  u8* keyboardState = SDL_GetKeyboardState(NULL);
 
-			if (keyboardState[SDL_SCANCODE_F2])
-			{
-				destroy_window(window);
-				window = load_window("UI/UI-Window.json");
-				instance->windows = window;
-				window->is_open = true;
-			}*/
+			// if (keyboardState[SDL_SCANCODE_F2])
+			// {
+			// 	destroy_window(window);
+			// 	window = load_window("UI/UI-Window.json");
+			// 	instance->windows = window;
+			// 	window->is_open = true;
+			// }
 			if (e.key.keysym.sym == SDLK_BACKSPACE)
 			{
 				if (p_window->last)
@@ -939,3 +820,4 @@ int destroy_window ( ui_window *p_window )
 		}
 	}
 }
+*/

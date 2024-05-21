@@ -1,44 +1,75 @@
+/** !
+ * UI window header
+
+ * @file ui/window.h
+ * 
+ * @author Jacob Smith
+ */
+
+// Include guard
 #pragma once
 
+// Standard Library
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <string.h>
 
+// sync module
+#include <sync/sync.h>
+
+// dict module
 #include <dict/dict.h>
+
+// array module
+#include <dict/dict.h>
+
+// json module
 #include <json/json.h>
 
+// ui module
 #include <ui/typedef.h>
 #include <ui/ui.h>
 
-// #include <ui/button.h>
-// #include <ui/UICanvas.h>
-// #include <ui/checkbox.h>
-// #include <ui/UIChart.h>
-// #include <ui/dropdown.h>
-// #include <ui/image.h>
-// #include <ui/radiobutton.h>
-// #include <ui/slider.h>
-// #include <ui/table.h>
-// #include <ui/textinput.h>
+// SDL
+#include <SDL.h>
+#undef main
 
-struct UIWindow_s
+// Preprocessor definitions
+#define UI_WINDOW_NAME_LENGTH_MAX  255 + 1
+#define UI_WINDOW_TITLE_LENGTH_MAX 255 + 1
+
+struct ui_window_s
 {
-	bool               is_open,
-	                   drag;
-	char              *name,
-	                  *title;
-	size_t             width,
-		               height,
-		               element_count,
-		               element_data_max;
-	i32                rx,
-		               ry;
-	dict              *elements;
-	ui_element      **element_data;
-	ui_element       *last;
-	SDL_Window        *window;
-	SDL_Renderer      *renderer;
+	struct
+	{
+		char _name [UI_WINDOW_NAME_LENGTH_MAX],
+		     _title[UI_WINDOW_TITLE_LENGTH_MAX];
+		size_t width, height;
+	} attributes;
+
+	struct 
+	{
+		bool is_open, drag;
+		i32 rx, ry;
+	} context;
+	
+	struct
+	{
+		size_t count, max;
+		dict              *elements;
+		ui_element      **element_data;
+		ui_element       *last;
+	} elements;
+	
+	struct
+	{
+		SDL_Window        *window;
+		SDL_Renderer      *renderer;		
+	} sdl2;
+	
+	parallel_thread *p_thread;
+	monitor          _monitor;
 	int (*path_drop_function)(ui_window *p_window, char *path);
 };
 
@@ -46,36 +77,34 @@ struct UIWindow_s
 /** !
  *  Allocate a window
  * 
- * @param pp_window : return
+ * @param pp_window return
  * 
- * @sa destroy_window
+ * @sa window_destroy
  * 
  * @return 1 on success, 0 on error
  */
-DLLEXPORT int create_window ( ui_window **pp_window );
+DLLEXPORT int window_create ( ui_window **const pp_window );
  
 // Constructors
-DLLEXPORT int load_window         ( ui_window **pp_window, const char *path );
-DLLEXPORT int load_window_as_json ( ui_window **pp_window, char       *text );
-DLLEXPORT int construct_window    ( ui_window **pp_window, char       *title, size_t width, size_t height, size_t element_count );
+DLLEXPORT int window_load         ( ui_window **pp_window, const char *path );
+DLLEXPORT int window_load_as_json ( ui_window **pp_window, char       *text );
+DLLEXPORT int window_construct    ( ui_window **pp_window, char       *title, size_t width, size_t height );
 
-// Element operations
-DLLEXPORT int          append_element_to_window ( ui_window *p_window, ui_element *element );
-DLLEXPORT ui_element *find_element             ( ui_window *p_window, char *name );
+// Accessors
+//
 
-DLLEXPORT int resize_window ( ui_window *p_window );
-
-DLLEXPORT int set_file_drop_operation ( ui_window *p_window, int (*callback_function)(ui_window *p_window, char *path));
+// Mutators
+DLLEXPORT int window_resize ( ui_window *const p_window );
 
 // User interaction
-DLLEXPORT int process_window_input ( ui_window *p_window );
-DLLEXPORT int click_window         ( ui_window *p_window, ui_mouse_state mouse_state );
-DLLEXPORT int hover_window         ( ui_window *p_window, ui_mouse_state mouse_state );
-DLLEXPORT int release_window       ( ui_window *p_window, ui_mouse_state mouse_state );
+DLLEXPORT int window_input_process ( ui_window *const p_window );
+DLLEXPORT int window_click         ( ui_window *p_window, ui_mouse_state mouse_state );
+DLLEXPORT int window_hover         ( ui_window *p_window, ui_mouse_state mouse_state );
+DLLEXPORT int window_release       ( ui_window *p_window, ui_mouse_state mouse_state );
 
 // Drawing 
-DLLEXPORT int draw_window ( ui_window *p_window );
+DLLEXPORT int window_draw ( const ui_window *const p_window );
 
-// Destruction
-DLLEXPORT int destroy_window ( ui_window *p_window );
+// Destructors
+DLLEXPORT int window_destroy ( ui_window **pp_window );
 

@@ -74,3 +74,5 @@ typedef struct ui_text_input_s   ui_text_input;
 typedef struct ui_element_s      ui_element;
 typedef struct ui_window_s       ui_window;
 typedef struct ui_instance_s     ui_instance;
+
+typedef int(*fn_window_constructor)(ui_window *p_window);
