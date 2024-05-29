@@ -204,7 +204,7 @@ int window_load_as_json ( ui_window **pp_window, char *text )
 		strncpy(p_window->attributes._title, p_title->string, len);
 
 		// Store a null terminator
-		p_window->attributes._name[len] = '\0';
+		p_window->attributes._title[len] = '\0';
 	}
 
 	// Set the width
