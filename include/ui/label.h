@@ -1,29 +1,35 @@
+/** !
+ * Header file for label element
+ * 
+ * @file ui/label.h
+ * 
+ * @author Jacob Smith
+ */
+
+// Header guard
 #pragma once
 
+// Standard library
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
+// log module
+#include <log/log.h>
+
+// json module
 #include <json/json.h>
 
+// ui
 #include <ui/ui.h>
 #include <ui/typedef.h>
 
+// Structure definitions
 struct ui_label_s
 {
-    char    *text;
-    i32      x, y, width, height, size;
-    
-    // Callbacks
-    size_t   on_click_count,   on_click_max,
-             on_hover_count,   on_hover_max,
-             on_release_count, on_release_max;
-    
-    void   **on_click,
-           **on_hover,
-           **on_release;
-    
+    char *text;
+    i32   x, y, width, height, size;    
 };
 
 // Allocators
@@ -48,23 +54,44 @@ DLLEXPORT int label_create ( ui_label **const pp_label );
 DLLEXPORT int label_load_as_json_value ( ui_label **const pp_label, const json_value *const p_value );
 
 // Draw
-DLLEXPORT int  label_draw                 ( ui_window  *p_window, ui_label       *p_label );
-
-// Callbacks
-DLLEXPORT int  label_click                ( ui_label   *p_label, ui_mouse_state  mouse_state );
-DLLEXPORT int  label_hover                ( ui_label   *p_label, ui_mouse_state  mouse_state );
-DLLEXPORT int  label_release              ( ui_label   *p_label, ui_mouse_state  mouse_state );
-
-// Add callbacks
-DLLEXPORT int  label_add_click   ( ui_label   *p_label, void           ( *callback ) ( ui_label*, ui_mouse_state) );
-DLLEXPORT int  label_add_hover   ( ui_label   *p_label, void           ( *callback ) ( ui_label*, ui_mouse_state) );
-DLLEXPORT int  label_add_release ( ui_label   *p_label, void           ( *callback ) ( ui_label*, ui_mouse_state) );
+/** !
+ * Draw a label on a window
+ * 
+ * @param p_window the window
+ * @param p_label  the label
+ * 
+ * @return 1 on success, 0 on error
+ */
+DLLEXPORT int label_draw ( ui_window *p_window, ui_label *p_label );
 
 // Bounds
-DLLEXPORT bool label_in_bounds            ( ui_label   *p_label, ui_mouse_state  mouse_state );
+/** !
+ * Test if the cursor is over a label
+ * 
+ * @param p_label     the label
+ * @param mouse_state the cursor state
+ * 
+ * @return true if cursor is over label else false
+ */
+DLLEXPORT bool label_in_bounds ( ui_label *p_label, ui_mouse_state mouse_state );
 
-// Printers
-DLLEXPORT int  print_label_to_file        ( ui_label   *p_label, FILE *f, char *name );
+// Serializer
+/** !
+ * Serialize a label to a file
+ * 
+ * @param p_label the label
+ * @param p_f     the file handle
+ *
+ * @return 1 on success, 0 on error
+ */
+DLLEXPORT int label_print_to_file ( const ui_label *const p_label, FILE *p_f );
 
 // Deallocators
-DLLEXPORT int label_destroy              ( ui_label   **pp_label );
+/** !
+ * Free a label
+ * 
+ * @param pp_label pointer to label pointer
+ * 
+ * @return 1 on success, 0 on error
+ */
+DLLEXPORT int label_destroy ( ui_label **pp_label );
