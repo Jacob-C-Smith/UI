@@ -14,7 +14,6 @@
 
 // ui
 #include <ui/ui.h>
-#include <ui/canvas.h>
 
 // Function declarations
 int setup_window ( ui_window *p_window );
@@ -37,7 +36,7 @@ int main ( int argc, const char **argv )
     p_ui_instance = ui_get_active_instance();
 
     // Add a window to the instsance
-    ui_window_add(&p_ui_window1, "window1.json", setup_window);
+    ui_window_add(&p_ui_window1, "window.json", setup_window);
 
     // Print information about the UI instance
     //ui_info(p_ui_instance);
@@ -45,12 +44,14 @@ int main ( int argc, const char **argv )
     // UI Loop
     while (p_ui_window1->context.is_open)
     {
-        SDL_Event e;
 
-        monitor_notify(&p_ui_window1->_monitor);
+        // Initialized data
+        SDL_Event e;
 
         // Present the window
         SDL_RenderPresent(p_ui_window1->sdl2.renderer);
+
+        monitor_notify(&p_ui_window1->_monitor);
 
         // Process events
         SDL_WaitEvent(&e);
@@ -88,7 +89,7 @@ int setup_window ( ui_window *p_window )
 
     // TODO: Set up the window
     //
-    canvas_init();
+    //canvas_init();
     
     // Success
     return 1;

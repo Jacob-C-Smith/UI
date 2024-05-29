@@ -3,17 +3,22 @@
     "width"    : 800,
     "height"   : 720,
     "title"    : "Window",
-    "elements" : [
+    "elements" : 
+    {
+        "label" : 
         {
             "type"     : "LABEL",
-            "name"     : "label",
             "text"     : "Label", 
             "x"        : 16,
             "y"        : 16,
             "size"     : 1
         },
+        "button" : 
         {
-            "type" : "CANVAS"
+            "type"  : "BUTTON",
+            "x"     : 16,
+            "y"     : 32,
+            "label" : "Button"
         }
-    ]
+    }
 }
