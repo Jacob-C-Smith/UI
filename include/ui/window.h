@@ -57,10 +57,10 @@ struct ui_window_s
 	
 	struct
 	{
-		size_t count, max;
-		dict        *lookup;
-		ui_element **data,
-		            *last;
+		size_t      count;
+		dict       *lookup;
+		ui_element *_data[64],
+		           *last;
 	} elements;
 	
 	struct

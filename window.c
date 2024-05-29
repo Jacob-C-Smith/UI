@@ -14,6 +14,9 @@ int window_create ( ui_window **pp_window )
 
 	// Return a pointer to the caller
 	*pp_window = p_window;
+
+	// Initialize
+	memset(p_window, 0, sizeof(ui_window));
 	
 	// Success
 	return 1;
@@ -168,7 +171,7 @@ int window_load_as_json ( ui_window **pp_window, char *text )
 	if ( p_width->type    != JSON_VALUE_INTEGER ) goto wrong_width_type;
 	if ( p_height->type   != JSON_VALUE_INTEGER ) goto wrong_height_type;
 	if ( p_title->type    != JSON_VALUE_STRING  ) goto wrong_title_type;
-	if ( p_elements->type != JSON_VALUE_ARRAY   ) goto wrong_array_type;
+	if ( p_elements->type != JSON_VALUE_OBJECT  ) goto wrong_elements_type;
 
 	// Allocate memory for a UI window
 	if ( window_create(&p_window) == 0 ) goto failed_to_allocate_window;
@@ -294,7 +297,7 @@ int window_load_as_json ( ui_window **pp_window, char *text )
 	element_type_error:
 	missing_properties:
 	no_elements:
-	wrong_array_type:
+	wrong_elements_type:
 	no_name:
 	empty_name:
 	wrong_type:
@@ -340,7 +343,7 @@ int window_draw ( const ui_window *const p_window )
 	// Initialized data
 	ui_instance *instance = ui_get_active_instance();
 
-	// Clear the window
+	// color <- background
 	SDL_SetRenderDrawColor(
 		p_window->sdl2.renderer,
 		(u8)instance->theme.background.r,
@@ -348,41 +351,41 @@ int window_draw ( const ui_window *const p_window )
 		(u8)instance->theme.background.b,
 		0
 	);
+
+	// Clear the window
 	SDL_RenderClear(p_window->sdl2.renderer);
 	
-	SDL_SetRenderDrawColor(
-		p_window->sdl2.renderer,
-		(u8)instance->theme.primary.r,
-		(u8)instance->theme.primary.g,
-		(u8)instance->theme.primary.b,
-		0
-	);
-	ui_draw_text("Hello, world!", p_window, 16, 16, 2);
-
+	// State check
+	if ( p_window->elements.count == 0 ) return 1;
+	
 	// Draw UI elements
-	if ( p_window->elements.count )
+	for (size_t i = 0; i < p_window->elements.count; i++)
 	{
 
-		// Iterate over element list
-		for (size_t i = 0; i < p_window->elements.count; i++)
+		// Initialized data
+		ui_element *p_element = p_window->elements._data[i];
 
-			// Draw each element
-			;//draw_element(p_window, p_window->elements.data[i]);
-
-		// Redraw the last element (to avoid overdraw)
-		//if ( p_window->last )
-		//	draw_element(p_window, p_window->last);
-
+		// Draw the element
+		p_element->p_functions->draw(p_window, p_element->p_element);
 	}
+
+	// Prevent overdraw by redrawing the active element
+	// if ( p_window->last )
+	//	draw_element(p_window, p_window->last);
 
 	// Success
 	return 1;
 
 	// TODO: Error handling
 	{
-		no_mem:
-		no_window:
-			return 0;
+
+		// Argument errors
+		{
+			no_window:
+
+				// Error
+				return 0;
+		}
 	}
 }
 
