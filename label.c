@@ -102,35 +102,6 @@ int label_load_as_json_value (ui_label**const pp_label, const json_value *const 
 			strncpy(p_label->text, p_text->string, label_text_len);
 		}
 
-		// Set the label color
-		if ( p_color )
-		{
-
-			// Initialized data
-			json_value *p_colors[3] = { 0, 0, 0 };
-			size_t       len = 0;
-			size_t       p_bytes[3] = { 0, 0, 0 };
-
-			array_get(p_color->list, 0, &len);
-
-			// Error check
-			if ( len != 3 ) goto wrong_color_length;
-			
-			array_get(p_color->list, &p_colors, 0);
-
-			for (size_t i = 0; i < 3; i++)
-				p_bytes[i] = p_colors[i]->integer;
-			
-			color c = 0;
-			c |= p_bytes[0];
-			c |= p_bytes[1] << 8;
-			c |= p_bytes[2] << 16;
-
-			p_label->c = c;
-		}
-		else
-			p_label->c = p_instance->primary;
-
 		// Set the x
 		if ( p_x->type == JSON_VALUE_INTEGER)
 			p_label->x = p_x->integer;
@@ -212,16 +183,17 @@ int label_draw ( ui_window *p_window, ui_label* p_label )
 	// Initialized data
 	ui_instance *p_instance = ui_get_active_instance();
 
-	// Don't draw a hidden label
-	if ( p_label->hidden == false )
-	{
+	// Set the draw color
+	SDL_SetRenderDrawColor(
+		p_window->sdl2.renderer,
+		p_instance->theme.primary.r,
+		p_instance->theme.primary.g,
+		p_instance->theme.primary.b,
+		0xff
+	);
 
-		// Set the draw color
-		SDL_SetRenderDrawColor(p_window->renderer, (u8)p_label->c, (u8)(p_label->c >> 8), (u8)(p_label->c >> 16), 0xff);
-
-		// Draw the label text
-		ui_draw_text(p_label->text, p_window, p_label->x, p_label->y, p_label->size);
-	}
+	// Draw the label text
+	ui_draw_text(p_label->text, p_window, p_label->x, p_label->y, p_label->size);
 
 	// Update the width and the height
 	p_label->width  = strlen(p_label->text) * 8 * p_label->size;
