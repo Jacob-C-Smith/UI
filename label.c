@@ -254,118 +254,25 @@ int draw_label ( ui_window *p_window, ui_label* p_label )
 	}
 }
 
-int click_label ( ui_label* p_label, ui_mouse_state mouse_state)
+int label_click ( ui_label* p_label, ui_mouse_state mouse_state )
 {
-
-	// Argument check
-	if ( p_label == (void *) 0 ) goto no_label;
-
-	// Iterate through callbacks
-	for (size_t i = 0; i < p_label->on_click_count; i++)
-	{
-
-		// Initialized data
-		void (*callback)(ui_label*, ui_mouse_state) = p_label->on_click[i];
-
-		// Call the callback function
-		if ( callback )
-			(*callback)(p_label, mouse_state);
-
-	}
 
 	// Success
 	return 1;
-
-	// Error handling
-	{
-
-		// Argument errors
-		{
-			no_label:
-				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for parameter \"p_label\" in call to function \"%s\"\n", __FUNCTION__);
-				#endif
-
-				// Error
-				return 0;
-		}
-	}
 }
 
-int hover_label ( ui_label* p_label, ui_mouse_state mouse_state)
+int label_hover ( ui_label* p_label, ui_mouse_state mouse_state)
 {
-	
-	// Argument check
-	if ( p_label == (void *) 0 ) goto no_label;
-	
-	// Iterate through callbacks
-	for (size_t i = 0; i < p_label->on_hover_count; i++)
-	{
-
-		// Initialized data
-		void (*callback)(ui_label*, ui_mouse_state) = p_label->on_hover[i];
-
-		// Call the callback function
-		if ( callback )
-			(*callback)(p_label, mouse_state);
-
-	}
 
 	// Success
 	return 1;
-
-	// Error handling
-	{
-
-		// Argument errors
-		{
-			no_label:
-				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for parameter \"p_label\" in call to function \"%s\"\n", __FUNCTION__);
-				#endif
-
-				// Error
-				return 0;
-		}
-	}
 }
 
-int release_label ( ui_label* p_label, ui_mouse_state mouse_state)
+int label_release ( ui_label* p_label, ui_mouse_state mouse_state)
 {
-
-	// Argument check
-	if ( p_label == (void *) 0 ) goto no_label;
-
-	// Iterate through callbacks
-	for (size_t i = 0; i < p_label->on_release_count; i++)
-	{
-
-		// Initialized data
-		void (*callback)(ui_label*, ui_mouse_state) = p_label->on_release[i];
-
-		// Call the callback function
-		if ( callback )
-			(*callback)(p_label, mouse_state);
-
-	}
 
 	// Success
 	return 1;
-
-	// Error handling
-	{
-
-		// Argument errors
-		{
-			no_label:
-				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for parameter \"p_label\" in call to function \"%s\"\n", __FUNCTION__);
-				#endif
-
-				// Error
-				return 0;
-		}
-	}
 }
 
 int add_click_callback_label ( ui_label* p_label, void(*callback)(ui_label*, ui_mouse_state))
