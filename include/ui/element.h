@@ -1,6 +1,5 @@
 #pragma once
 
-#include <ui/typedef.h>
 #include <ui/ui.h>
 #include <ui/label.h>
 
@@ -10,17 +9,7 @@ struct ui_element_s
 {
     char  _name[UI_ELEMENT_NAME_LENGTH_MAX];
     void *p_element;
-    struct
-    {
-        fn_element_draw        draw;
-        fn_element_bounds      bounds;
-        fn_element_click       click;
-        fn_element_hover       hover;
-        fn_element_release     release;
-        fn_element_add_click   add_click;
-        fn_element_add_hover   add_hover;
-        fn_element_add_release add_release;
-    } functions;
+    ui_element_info *p_functions;
 };
 
 // Allocators 
