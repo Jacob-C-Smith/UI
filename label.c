@@ -1,6 +1,6 @@
 #include <ui/label.h>
 
-int create_label ( ui_label **pp_label )
+int label_create ( ui_label **pp_label )
 {
 
 	// Argument check
@@ -25,7 +25,7 @@ int create_label ( ui_label **pp_label )
 		{
 			no_label:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for \"pp_label\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Label] Null pointer provided for \"pp_label\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error 
@@ -36,7 +36,7 @@ int create_label ( ui_label **pp_label )
 		{
 			no_mem:
 				#ifndef NDEBUG
-					ui_print_error("[Standard Library] Failed to allocate memory in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[Standard Library] Failed to allocate memory in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error 
@@ -45,7 +45,7 @@ int create_label ( ui_label **pp_label )
 	}
 }
 
-int load_label_as_json_value (ui_label** pp_label, json_value *p_value)
+int label_load_as_json_value (ui_label**const pp_label, const json_value *const p_value)
 {
 
 	// Argument check
@@ -83,7 +83,7 @@ int load_label_as_json_value (ui_label** pp_label, json_value *p_value)
 	{
 
 		// Allocate a label
-		if ( create_label(&p_label) == 0 ) goto failed_to_allocate_label;
+		if ( label_create(&p_label) == 0 ) goto failed_to_allocate_label;
 
 		// Copy the label text
 		if ( p_text->type == JSON_VALUE_STRING )
@@ -173,7 +173,7 @@ int load_label_as_json_value (ui_label** pp_label, json_value *p_value)
 		{
 			no_label:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for \"pp_label\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Label] Null pointer provided for \"pp_label\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -181,7 +181,7 @@ int load_label_as_json_value (ui_label** pp_label, json_value *p_value)
 
 			no_value:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for \"p_value\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Label] Null pointer provided for \"p_value\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -202,7 +202,7 @@ int load_label_as_json_value (ui_label** pp_label, json_value *p_value)
 	}
 }
 
-int draw_label ( ui_window *p_window, ui_label* p_label )
+int label_draw ( ui_window *p_window, ui_label* p_label )
 {
 
 	// Argument check
@@ -237,7 +237,7 @@ int draw_label ( ui_window *p_window, ui_label* p_label )
 		{
 			no_window:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for parameter \"p_window\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Label] Null pointer provided for parameter \"p_window\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -245,7 +245,7 @@ int draw_label ( ui_window *p_window, ui_label* p_label )
 
 			no_label:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for parameter \"p_label\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Label] Null pointer provided for parameter \"p_label\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -312,27 +312,16 @@ int add_click_callback_label ( ui_label* p_label, void(*callback)(ui_label*, ui_
 		{
 			no_label:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for parameter \"p_label\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[ui] [label] Null pointer provided for parameter \"p_label\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
 				return 0;
 		}
-
-		// Standard library errors
-		{
-			no_mem:
-				#ifndef NDEBUG
-					ui_print_error("[Standard Library] Failed to allocate memory in call to function \"%s\"\n", __FUNCTION__);
-				#endif
-
-				// Error 
-				return 0;
-		}
 	}
 }
 
-int add_hover_callback_label ( ui_label* p_label, void(*callback)(ui_label*, ui_mouse_state))
+int print_label_to_file ( ui_label *p_label, FILE *p_f, char *name )
 {
 
 	// Argument check
@@ -377,7 +366,7 @@ int add_release_callback_label ( ui_label* p_label, void(*callback)(ui_label*, u
 		{
 			no_label:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for parameter \"p_label\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Label] Null pointer provided for parameter \"pp_label\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -412,9 +401,9 @@ bool label_in_bounds ( ui_label  *p_label, ui_mouse_state mouse_state)
 
 		// Argument errors
 		{
-			no_label:
+			no_file:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for parameter \"p_label\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Label] Null pointer provided for parameter \"p_f\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -479,7 +468,7 @@ int print_label_to_file ( ui_label *p_label, FILE *f, char *name )
 	return 1;
 }
 
-int destroy_label ( ui_label  **pp_label )
+int label_destroy ( ui_label **pp_label )
 {
 
 	// Argument check
@@ -506,7 +495,7 @@ int destroy_label ( ui_label  **pp_label )
 		{
 			no_label:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for parameter \"pp_label\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Label] Null pointer provided for parameter \"pp_label\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
