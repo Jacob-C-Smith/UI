@@ -247,35 +247,20 @@ int label_release ( ui_label* p_label, ui_mouse_state mouse_state)
 	return 1;
 }
 
-int add_click_callback_label ( ui_label* p_label, void(*callback)(ui_label*, ui_mouse_state))
+bool label_in_bounds ( ui_label  *p_label, ui_mouse_state mouse_state)
 {
 
-    // Argument check
+	// Argument check
 	if ( p_label == (void *) 0 ) goto no_label;
 
-    // If this is the first callback, set the max to 1 and 
-    if ( p_label->on_click_max == 0 )
-    {
-		p_label->on_click_max = 1;
-		p_label->on_click = calloc(1, sizeof(void*));
-    }
-
-    // Simple heuristic that doubles callbacks lists length when there is no space to store the callback pointer
-    if ( p_label->on_click_count + 1 > p_label->on_click_max )
-    {
-        // Double the max
-		p_label->on_click_max *= 2;
-
-        realloc(p_label->on_click, p_label->on_click_max);
-		
-		if ( p_label->on_click == (void *) 0 ) goto no_mem;
-    }
-
-    // Increment the callback counter and install the new callback
-	p_label->on_click[p_label->on_click_count++] = callback;
-
+	// Initialized data
+	i32  x = p_label->x,
+		 y = p_label->y,
+		 w = p_label->width,
+		 h = p_label->height;
+	
 	// Success
-	return 1;
+	return ( mouse_state.x >= x && mouse_state.y >= y && mouse_state.x <= x + w && mouse_state.y <= y + h );
 
 	// Error handling
 	{
@@ -296,37 +281,75 @@ int add_click_callback_label ( ui_label* p_label, void(*callback)(ui_label*, ui_
 int print_label_to_file ( ui_label *p_label, FILE *p_f, char *name )
 {
 
-	// Argument check
-	if ( p_label == (void *) 0 ) goto no_label;
+	// Initialized data
+	json_value _value = { 0 },
+			   _type  = { 0 },
+			   _name  = { 0 },
+			   _text  = { 0 },
+			   _x     = { 0 },
+			   _y     = { 0 },
+			   _size  = { 0 };
 
-	// TODO: 
+	// Set the type
+	_value.type = JSON_VALUE_OBJECT;
 
-	// Success
-	return 1;
+	// Construct a dictionary 
+	dict_construct(&_value.object, 5, 0);
 
-	// Error handling
+	// Populate the type struct
+	_type = (json_value)
+	{ 
+		.type   = JSON_VALUE_STRING,
+		.string = "LABEL"
+	};
+
+	// Populate the name struct
+	_name = (json_value)
 	{
+		.type   = JSON_VALUE_STRING,
+		.string = name
+	};
 
-		// Argument errors
-		{
-			no_label:
-				#ifndef NDEBUG
-					ui_print_error("[UI] [Label] Null pointer provided for parameter \"p_label\" in call to function \"%s\"\n", __FUNCTION__);
-				#endif
+	// Populate the text struct
+	_text = (json_value)
+	{
+		.type   = JSON_VALUE_STRING,
+		.string = p_label->text
+	};
 
-				// Error
-				return 0;
-		}
-	}
-}
+	// Populate the x struct
+	_x = (json_value)
+	{
+		.type    = JSON_VALUE_INTEGER,
+		.integer = p_label->x
+	};
 
-int add_release_callback_label ( ui_label* p_label, void(*callback)(ui_label*, ui_mouse_state))
-{
-	
-	// Argument check
-	if ( p_label == (void *) 0 ) goto no_label;
+	// Populate the y struct
+	_y = (json_value)
+	{
+		.type    = JSON_VALUE_INTEGER,
+		.integer = p_label->y
+	};
 
-	// TODO: 
+	// Populate the size struct
+	_size = (json_value)
+	{
+		.type    = JSON_VALUE_INTEGER,
+		.integer = p_label->size
+	};
+
+	// Add each property to the value
+	dict_add(_value.object, "type", &_type);
+	dict_add(_value.object, "text", &_text);
+	dict_add(_value.object, "x"   , &_x);
+	dict_add(_value.object, "y"   , &_y);
+	dict_add(_value.object, "size", &_size);
+
+	// If a name was supplied, add it
+	dict_add(_value.object, "name", &_name);
+
+	// Print the JSON value to the file
+	json_value_fprint(&_value, p_f);
 
 	// Success
 	return 1;
@@ -343,36 +366,7 @@ int add_release_callback_label ( ui_label* p_label, void(*callback)(ui_label*, u
 
 				// Error
 				return 0;
-		}
-	}
-}
 
-bool label_in_bounds ( ui_label  *p_label, ui_mouse_state mouse_state)
-{
-
-	// Argument check
-	if ( p_label == (void *) 0 ) goto no_label;
-
-	// Initialized data
-	i32  x = p_label->x,
-		 y = p_label->y,
-		 w = p_label->width,
-		 h = p_label->height;
-	
-	// Check for intersection
-	if (mouse_state.x >= x && mouse_state.y >= y && mouse_state.x <= x + w && mouse_state.y <= y + h)
-
-		// In bounds
-		return true;
-
-	// Out of bounds
-	return false;
-
-	// Error handling
-	{
-
-		// Argument errors
-		{
 			no_file:
 				#ifndef NDEBUG
 					log_error("[UI] [Label] Null pointer provided for parameter \"p_f\" in call to function \"%s\"\n", __FUNCTION__);
@@ -384,62 +378,6 @@ bool label_in_bounds ( ui_label  *p_label, ui_mouse_state mouse_state)
 	}
 }
 
-int print_label_to_file ( ui_label *p_label, FILE *f, char *name )
-{
-
-	// Initialized data
-	json_value *p_value = calloc(1, sizeof(json_value));
-	
-
-	p_value->type = JSON_VALUE_OBJECT;
-	dict_construct(&p_value->object, 5, 0);
-
-	{
-
-		// Initialized data
-		json_value *p_type = calloc(1, sizeof(json_value)),
-		            *p_name = calloc(1, sizeof(json_value)),
-		            *p_text = calloc(1, sizeof(json_value)),
-		            *p_x    = calloc(1, sizeof(json_value)),
-		            *p_y    = calloc(1, sizeof(json_value)),
-		            *p_size = calloc(1, sizeof(json_value));
-
-		{
-
-			p_type->type = JSON_VALUE_STRING;
-			p_type->string = "LABEL";
-			
-			p_name->type = JSON_VALUE_STRING;
-			p_name->string = name;
-
-			p_text->type = JSON_VALUE_STRING;
-			p_text->string = p_text;
-
-			p_x->type = JSON_VALUE_STRING;
-			p_x->string = p_text;
-
-			p_y->type = JSON_VALUE_STRING;
-			p_y->string = p_text;
-
-			p_size->type = JSON_VALUE_STRING;
-			p_size->string = p_text;
-
-			dict_add(p_value->object, "type", p_type);
-			dict_add(p_value->object, "name", p_name);
-			dict_add(p_value->object, "text", p_text);
-			dict_add(p_value->object, "x", p_x);
-			dict_add(p_value->object, "y", p_y);
-			dict_add(p_value->object, "size", p_size);
-		}
-
-		print_json_value(p_value, f);
-
-	}
-
-	// Success
-	return 1;
-}
-
 int label_destroy ( ui_label **pp_label )
 {
 
@@ -447,15 +385,9 @@ int label_destroy ( ui_label **pp_label )
 	if ( pp_label == (void *) 0 ) goto no_label;
 
 	// Initialized data
-	ui_label *p_label = pp_label;
+	ui_label *p_label = *pp_label;
 
-	// Free the label text and the callbacks
-	free(p_label->text);
-	free(p_label->on_click);
-	free(p_label->on_hover);
-	free(p_label->on_release);
-
-	// Free the label
+	// Clean up
 	free(p_label);
 	
 	return 1;
