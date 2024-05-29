@@ -231,10 +231,15 @@ int window_load_as_json ( ui_window **pp_window, char *text )
 		
 		// Initialized data
 		size_t  element_count = 0;
-		array  *p_array       = p_elements->list;
+		dict   *p_dict        = p_elements->object;
+		const char *p_element_keys[64] = { 0 };
+		json_value *p_element_values[64] = { 0 };
 
 		// Store the size of the array
-		element_count = array_size(p_array);
+		element_count = dict_keys(p_dict, 0);
+
+		dict_keys(p_dict, &p_element_keys);
+		dict_values(p_dict, &p_element_values);
 
 		dict_construct(&p_window->elements.lookup, element_count, 0);
 
@@ -246,14 +251,20 @@ int window_load_as_json ( ui_window **pp_window, char *text )
 			ui_element *p_element       = (void *) 0;
 			json_value *p_element_value = 0;
 
-			// Store the element
-			array_index(p_array, i, &p_element_value);
-
 			// Construct the element
-			element_load_as_json_value(&p_element, p_element_value);
+			element_load_as_json_value(&p_element, p_element_values[i]);
 
-			// Add the element to the window
+			// Copy the name
+			strncpy(p_element->_name, p_element_keys[i], 63);
+
+			// Add the element to the lookup
 			dict_add(p_window->elements.lookup, &p_element->_name, p_element);
+
+			// Add the element to the list
+			p_window->elements._data[i] = p_element;
+
+			// Update the element counter
+			p_window->elements.count++;
 		}
 	}
 	
