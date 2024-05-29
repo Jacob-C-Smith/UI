@@ -380,19 +380,21 @@ void ui_init ( void )
     // Add base elements
     {
 
+        // External data
+        extern fn_element_click   label_click;
+        extern fn_element_hover   label_hover;
+        extern fn_element_release label_release;
+        
         // Initialized data
         ui_element_info _label = 
         {
-            .load        = (fn_element_load)label_load_as_json_value,
-            .draw        = (fn_element_draw)label_draw,
-            .bounds      = (fn_element_bounds)label_in_bounds,
-            .destructor  = (fn_element_destructor)label_destroy,
-            .click       = (fn_element_click)label_click,
-            .hover       = (fn_element_hover)label_hover,
-            .release     = (fn_element_release)label_release,
-            .add_click   = (fn_element_add_click)label_add_click,
-            .add_hover   = (fn_element_add_hover)label_add_hover,
-            .add_release = (fn_element_add_release)label_add_release
+            .load        = (fn_element_load)        label_load_as_json_value,
+            .draw        = (fn_element_draw)        label_draw,
+            .bounds      = (fn_element_bounds)      label_in_bounds,
+            .destructor  = (fn_element_destructor)  label_destroy,
+            .click       = (fn_element_click)       label_click,
+            .hover       = (fn_element_hover)       label_hover,
+            .release     = (fn_element_release)     label_release
         };
         
         // Register the label element

@@ -53,9 +53,6 @@
 #define UI_INSTANCE_NAME_LENGTH_MAX 255 + 1
 #define UI_INSTANCE_WINDOW_MAX      16
 
-#define BUILD_SYNC_WITH_MONITOR
-#define BUILD_SYNC_WITH_MONITOR
-
 // Set the reallocator for the dict module
 #ifdef DICT_REALLOC
     #undef DICT_REALLOC
@@ -105,9 +102,6 @@ struct ui_element_info_s
     fn_element_click       click;
     fn_element_hover       hover;
     fn_element_release     release;
-    fn_element_add_click   add_click;
-    fn_element_add_hover   add_hover;
-    fn_element_add_release add_release;
 };
 
 struct ui_instance_s
