@@ -48,11 +48,6 @@ int main ( int argc, const char **argv )
         // Initialized data
         SDL_Event e;
 
-        // Present the window
-        SDL_RenderPresent(p_ui_window1->sdl2.renderer);
-
-        monitor_notify(&p_ui_window1->_monitor);
-
         // Process events
         SDL_WaitEvent(&e);
 
@@ -66,6 +61,11 @@ int main ( int argc, const char **argv )
             default:
                 break;
         }
+
+        // Present the window
+        SDL_RenderPresent(p_ui_window1->sdl2.renderer);
+
+        monitor_notify(&p_ui_window1->_monitor);
     }
 
     // Success
