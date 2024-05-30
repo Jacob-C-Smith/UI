@@ -57,10 +57,12 @@ int button_load_as_json_value ( ui_button **const pp_button, const json_value *c
 	if ( p_value   == (void *) 0 ) goto no_value;
 
 	// Initialized data
+    ui_instance *p_instance = ui_get_active_instance();
 	ui_button *p_button  = 0;
 	json_value *p_label   = 0,
 	           *p_x       = 0,
 		       *p_y       = 0;
+    SDL_Surface *p_surface = (void *) 0;
 
 	// Get properties from the dictionary
     if (p_value->type == JSON_VALUE_OBJECT)
@@ -111,8 +113,29 @@ int button_load_as_json_value ( ui_button **const pp_button, const json_value *c
 		    p_button->y = p_y->integer;
         else
             goto wrong_y_type;
-        
 	}
+
+	p_surface = TTF_RenderText_Blended
+	(
+		p_instance->sdl2.font,
+		p_button->text,
+		(SDL_Color)
+		{
+			.r = p_instance->theme.primary.r,
+			.g = p_instance->theme.primary.g,
+			.b = p_instance->theme.primary.b,
+			.a = p_instance->theme.primary.a,
+		}
+	);
+
+	TTF_MeasureUTF8(p_instance->sdl2.font, p_button->text, 10000, &p_button->width, 0);
+
+	p_button->sdl2.texture = SDL_CreateTextureFromSurface(
+		p_instance->windows.active->sdl2.renderer,
+		p_surface
+	);
+
+	SDL_FreeSurface(p_surface);
 
 	// Return
 	*pp_button = p_button;
@@ -252,10 +275,14 @@ int button_draw ( ui_window *p_window, ui_button *p_button )
     // Initialized data
     ui_instance *p_instance = ui_get_active_instance();
     size_t       l          = strlen(p_button->text);
-    SDL_Rect     r          = { p_button->x+1, p_button->y+1, (l * 8) + 5, 12 };
-    
-    p_button->width = r.w,
-    p_button->height = r.h;
+    SDL_Rect     r = 
+    {
+        p_button->x,
+        p_button->y,
+        p_button->width + (p_instance->font.size / 5),
+        p_instance->font.size + (p_instance->font.size / 5)
+    };
+    SDL_Rect d = { 0 };
 
     if ( p_button->depressed == false )
     {
@@ -270,7 +297,6 @@ int button_draw ( ui_window *p_window, ui_button *p_button )
         );
         SDL_RenderDrawLine(p_window->sdl2.renderer, r.x + r.w - 1, r.y, r.x + r.w - 1, r.y + r.h - 1);
         SDL_RenderDrawLine(p_window->sdl2.renderer, r.x, r.y + r.h - 1, r.x + r.w - 1, r.y + r.h - 1);
-        r.x--, r.y--;
     }
 
     // Set the draw color
@@ -295,7 +321,17 @@ int button_draw ( ui_window *p_window, ui_button *p_button )
 
     SDL_RenderDrawRect(p_window->sdl2.renderer, &r);
     
-    ui_draw_text(p_button->text, p_window, r.x + 3, r.y + 1, 1);
+	d = (SDL_Rect)
+	{
+		.x = p_button->x + (p_instance->font.size / 10),
+		.y = p_button->y - (p_instance->font.size / 20),
+		.w = p_button->width,
+		.h = p_instance->font.size + (p_instance->font.size / 5)
+	};
+
+	SDL_RenderCopy(p_window->sdl2.renderer, p_button->sdl2.texture, NULL, &d);
+
+    //ui_draw_text(p_button->text, p_window, r.x + 5, r.y + 3, 1);
 
     // Success
     return 1;

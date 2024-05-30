@@ -229,6 +229,8 @@ int window_load_as_json ( ui_window **pp_window, char *text )
 	// Create a monitor
 	monitor_create(&p_window->_monitor);
 
+	p_instance->windows.active = p_window;
+
 	// Construct window elements
 	{
 		

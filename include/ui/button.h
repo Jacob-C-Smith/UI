@@ -25,12 +25,20 @@
 #include <ui/ui.h>
 #include <ui/typedef.h>
 
+// SDL2
+#include <SDL.h>
+
 // Structure definitions
 struct ui_button_s
 {
     char *text;
     i32   x, y, width, height, size;
     bool  depressed;
+    struct
+    {
+        SDL_Texture *texture;
+    } sdl2;
+    
 };
 
 // Allocators

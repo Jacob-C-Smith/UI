@@ -32,15 +32,17 @@ u64 font[137] = {
     0x00003B66663E060F, 0x00006E33333E3078, 0x00003B6E66060F00, 0x00003E031E301F00, 0x080C3E0C0C2C1800, 0x0000333333336E00, 0x00003333331E0C00, 0x0000636B7F7F3600,
     0x000063361C366300, 0x00003333333E301F, 0x00003F190C263F00, 0x380C0C070C0C3800, 0x1818180018181800, 0x070C0C380C0C0700, 0x6E3B000000000000, 0x0000000000000000,
     0x80C0E070371E1C08, 0x00001c3e3e3e1c00, 0x040C1C3C3C1C0C04, 0x0000ff4224180000, 0x7E7E7E7E7E7E3C18, 0x0709FF81818181FF, 0x784C46424242427E, 0x183C7E1818181818,
-    0xC3E77e3c3c7eE7C3};
+    0xC3E77E3C3C7EE7C3};
 
 const char _default_config[] = "{\n"\
                                "    \"name\"       : \"Default\",\n"\
                                "    \"primary\"    : [ 0, 0, 0 ],\n"\
-                               "    \"accent 1\"   : [ 192, 192, 192 ],\n"\ 
+                               "    \"accent 1\"   : [ 192, 192, 192 ],\n"\
                                "    \"accent 2\"   : [ 128, 128, 128 ],\n"\
                                "    \"accent 3\"   : [ 0, 128, 255 ],\n"\
-                               "    \"background\" : [ 255, 255, 255 ]\n"\ 
+                               "    \"background\" : [ 255, 255, 255 ],\n"\
+                               "    \"font size\"  : 22,\n"\
+                               "    \"font path\"  : \"SourceCodePro.ttf\"\n"\
                                "}\n";
 ui_instance _active_instance = { 0 };
 static bool initialized = false;
@@ -130,14 +132,16 @@ void ui_init ( void )
     {
         
         // Initialized data
+        dict *p_dict = 0;
         const json_value *p_value      = (void *) 0,
                          *p_name       = (void *) 0,
                          *p_primary    = (void *) 0,
                          *p_accent_1   = (void *) 0,
                          *p_accent_2   = (void *) 0,
                          *p_accent_3   = (void *) 0,
-                         *p_background = (void *) 0;
-        dict *p_dict = 0;
+                         *p_background = (void *) 0,
+                         *p_font_size  = (void *) 0,
+                         *p_font_path  = (void *) 0;
 
         // Parse the config file into a json value
         if ( json_value_parse(&_config_file_contents, 0, &p_value) == 0 ) goto failed_to_parse_json;
@@ -155,6 +159,8 @@ void ui_init ( void )
         p_accent_2   = dict_get(p_dict, "accent 2");
         p_accent_3   = dict_get(p_dict, "accent 3");
         p_background = dict_get(p_dict, "background");
+        p_font_size  = dict_get(p_dict, "font size");
+        p_font_path  = dict_get(p_dict, "font path");
 
         // Error check
         if ( (
@@ -163,7 +169,8 @@ void ui_init ( void )
                 p_accent_1   &&
                 p_accent_2   &&
                 p_accent_3   &&
-                p_background
+                p_background &&
+                p_font_size
         ) == false )
             goto missing_properties;
 
@@ -355,6 +362,22 @@ void ui_init ( void )
             else goto wrong_background_type;
         }
     
+        // Store the font size
+        _active_instance.font.size = p_font_size->integer;
+
+        // Store the font path
+        {
+
+            // Initialized data
+            size_t len = strlen(p_font_path->string);
+
+            // Error check
+            if ( len > 255 - 1 ) goto font_path_too_long;
+
+            // Copy the name
+            strncpy(_active_instance.font._path, p_font_path->string, len);
+        }
+
         // Clean up
         json_value_free(p_value);
     }
@@ -363,12 +386,17 @@ void ui_init ( void )
     {
 
         // Fixes blurry rendering on Mac OS
-        #ifdef __APPLE__
-            SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
-        #endif
-
         // Initialize SDL
         if ( SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0 ) goto failed_to_init_sdl2;
+
+        // Initialize SDL Image
+        //
+
+        // Initialize SDL TTF
+        if ( TTF_Init() == -1 ) goto failed_to_init_sdl2_ttf;
+
+        // Load a font
+        _active_instance.sdl2.font = TTF_OpenFont(_active_instance.font._path, _active_instance.font.size);
     }
 
     // Initialize the window system
@@ -466,6 +494,9 @@ void ui_init ( void )
     failed_background:
     wrong_background_type:
     failed_to_init_sdl2:
+    failed_to_init_sdl2_image:
+    failed_to_init_sdl2_ttf:
+    font_path_too_long:
         
         // Abort
         exit(EXIT_FAILURE);

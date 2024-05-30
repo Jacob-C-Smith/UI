@@ -40,6 +40,7 @@
 
 // SDL
 #include <SDL.h>
+#include <SDL_ttf.h>
 #undef main
 
 // Preprocessor definitions
@@ -126,6 +127,17 @@ struct ui_instance_s
               accent_2,
               accent_3;
     } theme;
+
+    struct 
+    {
+        i32   size;
+        char  _path[255 + 1];
+    } font;
+
+    struct
+    {
+        TTF_Font *font;
+    } sdl2;
 };
 
 // Initializer

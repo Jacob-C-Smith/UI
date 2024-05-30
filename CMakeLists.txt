@@ -10,10 +10,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
 set(CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/extern/)
 
 IF(WIN32)
-    find_package(SDL2_image REQUIRED CONFIG REQUIRED COMPONENTS SDL2_image)
+find_package(SDL2_image REQUIRED CONFIG REQUIRED COMPONENTS SDL2_image)
+find_package(SDL2_ttf REQUIRED CONFIG REQUIRED COMPONENTS SDL2_ttf)
 ELSEIF(LINUX)
     set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
     find_package(SDL2_image REQUIRED)
+    find_package(SDL2_ttf REQUIRED)
 ELSEIF(APPLE)
 
 ENDIF(WIN32)
@@ -160,8 +162,8 @@ endif()
 # Add source to this project's executable.
 add_executable (ui_example "main.c")
 add_dependencies(ui_example ui parallel tuple json array dict hash_cache queue sync )
-target_include_directories(ui_example PUBLIC include ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${UI_INCLUDE_DIR} ${ARRAY_INCLUDE_DIR} ${HASH_CACHE_INCLUDE_DIR} ${DICT_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${LOG_INCLUDE_DIR} ${PARALLEL_INCLUDE_DIR} ${SYNC_INCLUDE_DIR} ${TUPLE_INCLUDE_DIR}) 
-target_link_libraries(ui_example PUBLIC ui parallel tuple tuple json array dict hash_cache queue sync ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
+target_include_directories(ui_example PUBLIC include ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${SDL2_TTF_INCLUDE_DIRS} ${UI_INCLUDE_DIR} ${ARRAY_INCLUDE_DIR} ${HASH_CACHE_INCLUDE_DIR} ${DICT_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${LOG_INCLUDE_DIR} ${PARALLEL_INCLUDE_DIR} ${SYNC_INCLUDE_DIR} ${TUPLE_INCLUDE_DIR}) 
+target_link_libraries(ui_example PUBLIC ui parallel tuple tuple json array dict hash_cache queue sync ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES} ${SDL2_TTF_LIBRARIES})
 
 # add_library (ui_canvas SHARED "canvas.c")       
 # add_dependencies(ui_canvas ui parallel tuple json array dict hash_cache queue sync)
@@ -172,5 +174,5 @@ target_link_libraries(ui_example PUBLIC ui parallel tuple tuple json array dict 
 #add_library (ui SHARED "ui.c" "fileselector.c" "window.c" "button.c" "image.c" "checkbox.c" "dropdown.c" "element.c" "radiobutton.c" "label.c" "slider.c" "textinput.c" "table.c") #      
 add_library (ui SHARED "ui.c" "window.c" "element.c" "label.c" "button.c") 
 add_dependencies(ui parallel tuple json array dict hash_cache queue sync)
-target_include_directories(ui PUBLIC ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${UI_INCLUDE_DIR} ${ARRAY_INCLUDE_DIR} ${DICT_INCLUDE_DIR} ${HASH_CACHE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${LOG_INCLUDE_DIR} ${PARALLEL_INCLUDE_DIR} ${SYNC_INCLUDE_DIR} ${TUPLE_INCLUDE_DIR}) 
-target_link_libraries(ui PUBLIC parallel tuple json array dict hash_cache queue sync  ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
+target_include_directories(ui PUBLIC ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${SDL2_TTF_INCLUDE_DIRS} ${UI_INCLUDE_DIR} ${ARRAY_INCLUDE_DIR} ${DICT_INCLUDE_DIR} ${HASH_CACHE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${LOG_INCLUDE_DIR} ${PARALLEL_INCLUDE_DIR} ${SYNC_INCLUDE_DIR} ${TUPLE_INCLUDE_DIR}) 
+target_link_libraries(ui PUBLIC parallel tuple json array dict hash_cache queue sync ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES} ${SDL2_TTF_LIBRARIES})

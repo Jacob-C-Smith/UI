@@ -25,11 +25,19 @@
 #include <ui/ui.h>
 #include <ui/typedef.h>
 
+// SDL2 
+#include <SDL.h>
+
 // Structure definitions
 struct ui_label_s
 {
     char *text;
-    i32   x, y, width, height, size;    
+    i32   x, y, width, height;
+    struct
+    {
+        SDL_Texture *texture;
+    } sdl2;
+       
 };
 
 // Allocators

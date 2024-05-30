@@ -53,13 +53,13 @@ int label_load_as_json_value (ui_label**const pp_label, const json_value *const 
 	if ( p_value  == (void *) 0 ) goto no_value;
 
 	// Initialized data
-	ui_instance *p_instance = ui_get_active_instance();
-	ui_label    *p_label    = 0;
-	json_value   *p_text     = 0,
-	             *p_x        = 0,
-		         *p_y        = 0,
-		         *p_size     = 0,
-	             *p_color    = 0;
+	ui_instance  *p_instance = ui_get_active_instance();
+	ui_label     *p_label    = (void *) 0;
+	json_value   *p_text     = (void *) 0,
+	             *p_x        = (void *) 0,
+		         *p_y        = (void *) 0;
+	SDL_Surface  *p_surface  = (void *) 0;
+	SDL_Texture  *p_texture  = (void *) 0;
 
 	// Get properties from the dictionary
     if ( p_value->type == JSON_VALUE_OBJECT )
@@ -71,12 +71,9 @@ int label_load_as_json_value (ui_label**const pp_label, const json_value *const 
         p_text  = dict_get(p_dict, "text");
         p_x     = dict_get(p_dict, "x");
 		p_y     = dict_get(p_dict, "y");
-		p_size  = dict_get(p_dict, "size");
-		p_color = dict_get(p_dict, "color");
 
 		// Error checking
-		if ( ! ( p_text && p_x && p_y && p_size ) )
-			goto missing_properties;
+		if ( ! ( p_text && p_x && p_y ) ) goto missing_properties;
     }
 
 	// Construct the label
@@ -116,13 +113,30 @@ int label_load_as_json_value (ui_label**const pp_label, const json_value *const 
 		else
 			goto wrong_y_type;
 
-		// Set the size
-		if ( p_size->type == JSON_VALUE_INTEGER)
-			p_label->size = p_size->integer;
-		// Default
-		else
-			goto wrong_size_type;
+		p_label->height = p_instance->font.size + 1;
 	}
+
+	p_surface = TTF_RenderText_Blended
+	(
+		p_instance->sdl2.font,
+		p_label->text,
+		(SDL_Color)
+		{
+			.r = p_instance->theme.primary.r,
+			.g = p_instance->theme.primary.g,
+			.b = p_instance->theme.primary.b,
+			.a = p_instance->theme.primary.a,
+		}
+	);
+
+	TTF_MeasureUTF8(p_instance->sdl2.font, p_label->text, 10000, &p_label->width, 0);
+
+	p_label->sdl2.texture = SDL_CreateTextureFromSurface(
+		p_instance->windows.active->sdl2.renderer,
+		p_surface
+	);
+
+	SDL_FreeSurface(p_surface);
 
 	// Return
 	*pp_label = p_label;
@@ -182,6 +196,7 @@ int label_draw ( ui_window *p_window, ui_label* p_label )
 
 	// Initialized data
 	ui_instance *p_instance = ui_get_active_instance();
+	SDL_Rect d = { 0 };
 
 	// Set the draw color
 	SDL_SetRenderDrawColor(
@@ -193,11 +208,21 @@ int label_draw ( ui_window *p_window, ui_label* p_label )
 	);
 
 	// Draw the label text
-	ui_draw_text(p_label->text, p_window, p_label->x, p_label->y, p_label->size);
+	//ui_draw_text(p_label->text, p_window, p_label->x, p_label->y, p_label->size);
 
 	// Update the width and the height
-	p_label->width  = strlen(p_label->text) * 8 * p_label->size;
-	p_label->height = 8 * p_label->size;
+	//p_label->width  = strlen(p_label->text) * p_label->size;
+	//p_label->height = p_label->size;
+
+	d = (SDL_Rect)
+	{
+		.x = p_label->x,
+		.y = p_label->y,
+		.w = p_label->width,
+		.h = p_label->height + 4
+	};
+
+	SDL_RenderCopy(p_window->sdl2.renderer, p_label->sdl2.texture, NULL, &d);
 
 	// Success
 	return 1;
@@ -287,8 +312,7 @@ int print_label_to_file ( ui_label *p_label, FILE *p_f, char *name )
 			   _name  = { 0 },
 			   _text  = { 0 },
 			   _x     = { 0 },
-			   _y     = { 0 },
-			   _size  = { 0 };
+			   _y     = { 0 };
 
 	// Set the type
 	_value.type = JSON_VALUE_OBJECT;
@@ -331,19 +355,11 @@ int print_label_to_file ( ui_label *p_label, FILE *p_f, char *name )
 		.integer = p_label->y
 	};
 
-	// Populate the size struct
-	_size = (json_value)
-	{
-		.type    = JSON_VALUE_INTEGER,
-		.integer = p_label->size
-	};
-
 	// Add each property to the value
 	dict_add(_value.object, "type", &_type);
 	dict_add(_value.object, "text", &_text);
 	dict_add(_value.object, "x"   , &_x);
 	dict_add(_value.object, "y"   , &_y);
-	dict_add(_value.object, "size", &_size);
 
 	// If a name was supplied, add it
 	dict_add(_value.object, "name", &_name);
