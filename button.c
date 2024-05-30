@@ -295,8 +295,28 @@ int button_draw ( ui_window *p_window, ui_button *p_button )
             p_instance->theme.accent_2.b,
             0xff
         );
-        SDL_RenderDrawLine(p_window->sdl2.renderer, r.x + r.w - 1, r.y, r.x + r.w - 1, r.y + r.h - 1);
-        SDL_RenderDrawLine(p_window->sdl2.renderer, r.x, r.y + r.h - 1, r.x + r.w - 1, r.y + r.h - 1);
+
+        for (signed i = 0; i < (p_instance->font.size / 5); i++)
+        {
+            SDL_RenderDrawLine(p_window->sdl2.renderer, r.x + r.w + i, r.y + i, r.x + r.w + i, r.y + r.h + i);
+            SDL_RenderDrawLine(p_window->sdl2.renderer, r.x + i, r.y + r.h + i, r.x + r.w + i, r.y + r.h + i);
+        }
+        
+        // Set the draw color
+        SDL_SetRenderDrawColor(
+            p_window->sdl2.renderer,
+            p_instance->theme.primary.r,
+            p_instance->theme.primary.g,
+            p_instance->theme.primary.b,
+            0xff
+        );
+        
+        SDL_RenderDrawLine(p_window->sdl2.renderer, r.x + r.w, r.y, r.x + r.w + (p_instance->font.size / 5), r.y + (p_instance->font.size / 5));
+        SDL_RenderDrawLine(p_window->sdl2.renderer, r.x + r.w, r.y + r.h, r.x + r.w + (p_instance->font.size / 5), r.y + r.h + (p_instance->font.size / 5));
+        SDL_RenderDrawLine(p_window->sdl2.renderer, r.x, r.y + r.h, r.x + (p_instance->font.size / 5), r.y + r.h + (p_instance->font.size / 5));
+        SDL_RenderDrawLine(p_window->sdl2.renderer, r.x + (p_instance->font.size / 5), r.y + r.h + (p_instance->font.size / 5), r.x + r.w + (p_instance->font.size / 5), r.y + r.h + (p_instance->font.size / 5));
+        SDL_RenderDrawLine(p_window->sdl2.renderer, r.x + r.w + (p_instance->font.size / 5), r.y + (p_instance->font.size / 5), r.x + r.w + (p_instance->font.size / 5), r.y + r.h + (p_instance->font.size / 5));
+
     }
 
     // Set the draw color
