@@ -608,6 +608,9 @@ int ui_window_add ( ui_window **pp_window, const char *const path, fn_window_con
     // Update the active window
     _active_instance.windows.active = p_window;
 
+    // Repaint the window to avoid a race condition while presenting
+    window_draw(p_window);
+
     // Return a pointer to the caller
     *pp_window = p_window;
 
