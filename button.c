@@ -1,16 +1,20 @@
+// Header file
 #include <ui/button.h>
 
-int create_button ( ui_button **pp_button )
+int button_create ( ui_button **pp_button )
 {
 
 	// Argument check
     if ( pp_button == (void *) 0 ) goto no_button;
 
     // Initialized data
-    ui_button* p_button = calloc(1, sizeof(ui_button));
+    ui_button* p_button = UI_REALLOC(0, sizeof(ui_button));
 
     // Check memory
     if ( p_button == (void *) 0 ) goto no_mem;
+
+    // Zero set
+    memset(p_button, 0, sizeof(ui_button));
 
     // Return a pointer to the caller
     *pp_button = p_button;
@@ -25,7 +29,7 @@ int create_button ( ui_button **pp_button )
         {
             no_button:
                 #ifndef NDEBUG
-                    ui_print_error("[UI] [Button] Null pointer provided for \"pp_button\" in call to function \"%s\"\n",__FUNCTION__);
+                    log_error("[ui] [button] Null pointer provided for \"pp_button\" in call to function \"%s\"\n",__FUNCTION__);
                 #endif
 
                 // Error
@@ -36,7 +40,7 @@ int create_button ( ui_button **pp_button )
         {
             no_mem:
                 #ifndef NDEBUG
-                    ui_print_error("[Standard library] Failed to allocate memory in call to function \"%s\"\n",__FUNCTION__);
+                    log_error("[standard library] Failed to allocate memory in call to function \"%s\"\n",__FUNCTION__);
                 #endif
 
                 // Error
@@ -45,7 +49,7 @@ int create_button ( ui_button **pp_button )
     }
 }
 
-int load_button_as_json_value ( ui_button **const pp_button, const json_value *const p_value )
+int button_load_as_json_value ( ui_button **const pp_button, const json_value *const p_value )
 {
 
     // Argument check
@@ -65,7 +69,7 @@ int load_button_as_json_value ( ui_button **const pp_button, const json_value *c
         // Initialized data
         dict *p_dict = p_value->object;
 
-        p_label = dict_get(p_dict, "label");
+        p_label = dict_get(p_dict, "text");
         p_x     = dict_get(p_dict, "x");
 		p_y     = dict_get(p_dict, "y");
     }
@@ -74,7 +78,7 @@ int load_button_as_json_value ( ui_button **const pp_button, const json_value *c
 	{
 
 		// Allocate a label
-		if ( create_label(&p_button) == 0 ) goto failed_to_allocate_label;
+		if ( button_create(&p_button) == 0 ) goto failed_to_allocate_button;
 
 		// Copy the label text
 		if ( p_label->type == JSON_VALUE_STRING )
@@ -84,13 +88,13 @@ int load_button_as_json_value ( ui_button **const pp_button, const json_value *c
 			size_t label_text_len = strlen(p_label->string);
 
 			// Allocate memory for the label text
-			p_button->label = calloc(label_text_len+1, sizeof(char));
+			p_button->text = calloc(label_text_len+1, sizeof(char));
 
 			// Error checking
-            if ( p_button->label == (void *) 0 ) goto no_mem;
+            if ( p_button->text == (void *) 0 ) goto no_mem;
 
 			// Copy the string
-			strncpy(p_button->label, p_label->string, label_text_len);
+			strncpy(p_button->text, p_label->string, label_text_len);
 		}
         // Default
         else
@@ -98,13 +102,13 @@ int load_button_as_json_value ( ui_button **const pp_button, const json_value *c
 
 		// Set the x
         if ( p_x->type == JSON_VALUE_INTEGER )
-		    p_button->location.x = p_x->integer;
+		    p_button->x = p_x->integer;
         else
             goto wrong_x_type;
         
 		// Set the y
 		if ( p_y->type == JSON_VALUE_INTEGER )
-		    p_button->location.y = p_y->integer;
+		    p_button->y = p_y->integer;
         else
             goto wrong_y_type;
         
@@ -128,7 +132,7 @@ int load_button_as_json_value ( ui_button **const pp_button, const json_value *c
 		{
 			no_button:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Button] Null pointer provided for \"pp_button\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Button] Null pointer provided for \"pp_button\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -136,7 +140,7 @@ int load_button_as_json_value ( ui_button **const pp_button, const json_value *c
                 
 			no_value:
 				#ifndef NDEBUG
-					ui_print_error("[UI] [Button] Null pointer provided for \"p_value\" in call to function \"%s\"\n", __FUNCTION__);
+					log_error("[UI] [Button] Null pointer provided for \"p_value\" in call to function \"%s\"\n", __FUNCTION__);
 				#endif
 
 				// Error
@@ -144,7 +148,7 @@ int load_button_as_json_value ( ui_button **const pp_button, const json_value *c
 		}
 
 		// TODO:
-		failed_to_allocate_label:
+		failed_to_allocate_button:
 
 		// Insufficent data error
 		{
@@ -157,23 +161,11 @@ int load_button_as_json_value ( ui_button **const pp_button, const json_value *c
 	}
 }
 
-int hover_button ( ui_button *const p_button, ui_mouse_state mouse_state)
+int button_hover ( ui_button *const p_button, ui_mouse_state mouse_state)
 {
 
     // Argument check
     if ( p_button == (void *) 0 ) goto no_button;
-
-    // Iterate through hover callbacks
-    for (size_t i = 0; i < p_button->callback.hover.count; i++)
-    {
-
-        // Define the callback function
-        void (*callback)(ui_button*, ui_mouse_state) = p_button->callback.hover.callbacks[i];
-
-        // Call the callback function
-        if ( callback ) (*callback)(p_button, mouse_state);
-
-    }
 
     // Success
     return 1;
@@ -185,7 +177,7 @@ int hover_button ( ui_button *const p_button, ui_mouse_state mouse_state)
         {
             no_button:
                 #ifndef NDEBUG
-                    ui_print_error("[UI] [Button] Null pointer provided for \"button\" in call to function \"%s\"\n", __FUNCTION__);
+                    log_error("[UI] [Button] Null pointer provided for \"button\" in call to function \"%s\"\n", __FUNCTION__);
                 #endif
                 
                 // Error
@@ -194,7 +186,7 @@ int hover_button ( ui_button *const p_button, ui_mouse_state mouse_state)
     }
 }
 
-int click_button ( ui_button *const p_button, ui_mouse_state mouse_state)
+int button_click ( ui_button *const p_button, ui_mouse_state mouse_state)
 {
 
     // Argument check
@@ -204,18 +196,6 @@ int click_button ( ui_button *const p_button, ui_mouse_state mouse_state)
     // TODO: Figure out how to clear the depressed flag in my brain
     p_button->depressed = true;
 
-    // Iterate through callbacks
-    for (size_t i = 0; i < p_button->callback.click.count; i++)
-    {
-
-        // Define the callback function
-        void (*callback)(ui_button*, ui_mouse_state) = p_button->callback.click.callbacks[i];
-
-        // Call the callback function
-        if(callback) (*callback)(p_button, mouse_state);
-
-    }
-
     // Success
     return 1;
 
@@ -226,7 +206,7 @@ int click_button ( ui_button *const p_button, ui_mouse_state mouse_state)
         {
             no_button:
                 #ifndef NDEBUG
-                    ui_print_error("[UI] [Button] Null pointer provided for \"p_button\" in call to function \"%s\"\n",__FUNCTION__);
+                    log_error("[UI] [Button] Null pointer provided for \"p_button\" in call to function \"%s\"\n",__FUNCTION__);
                 #endif
 
                 // Error
@@ -235,7 +215,7 @@ int click_button ( ui_button *const p_button, ui_mouse_state mouse_state)
     }
 }
 
-int release_button ( ui_button *const p_button, ui_mouse_state mouse_state )
+int button_release ( ui_button *const p_button, ui_mouse_state mouse_state )
 {
 
     // Argument check
@@ -244,18 +224,6 @@ int release_button ( ui_button *const p_button, ui_mouse_state mouse_state )
     // Clear the depressed flag
     p_button->depressed = false;
 
-    // Iterate through callbacks
-    for (size_t i = 0; i < p_button->callback.release.count; i++)
-    {
-
-        // Define the callback function
-        void (*callback)(ui_button*, ui_mouse_state) = p_button->callback.release.callbacks[i];
-
-        // Call the callback function
-        if (callback) (*callback)(p_button, mouse_state);
-
-    }
-
     // Success
     return 1;
     
@@ -266,7 +234,7 @@ int release_button ( ui_button *const p_button, ui_mouse_state mouse_state )
         {
             no_button:
                 #ifndef NDEBUG
-                    ui_print_error("[UI] [Button] Null pointer provided for \"p_button\" in call to function \"%s\"\n",__FUNCTION__);
+                    log_error("[UI] [Button] Null pointer provided for \"p_button\" in call to function \"%s\"\n",__FUNCTION__);
                 #endif
 
                 // Error
@@ -275,155 +243,59 @@ int release_button ( ui_button *const p_button, ui_mouse_state mouse_state )
     }
 }
 
-int add_click_callback_button ( ui_button  *p_button, void(*callback)(ui_button*, ui_mouse_state) )
-{
-
-    // TODO: Argument check
-    //
-
-    // If this is the first callback, set the max to 1 and 
-    if ( p_button->callback.click.max == 0 )
-    {
-        p_button->callback.click.max = 1;
-        p_button->callback.click.callbacks = calloc(1, sizeof(void*));
-    }
-
-    // Simple heuristic that doubles callbacks lists length when there is no space to store the callback pointer
-    if ( p_button->callback.click.count + 1 > p_button->callback.click.max )
-    {
-
-        // Double the max
-        p_button->callback.click.max *= 2;
-
-        // Expand the callback list
-        realloc(p_button->callback.click.callbacks, p_button->callback.click.max);
-    }
-
-    // Increment the callback counter and install the new callback
-    p_button->callback.click.callbacks[p_button->callback.click.count++] = callback;
-
-    // Success
-    return 1;
-
-    // TODO: Error handling
-}
-
-int add_hover_callback_button ( ui_button *button, void(*callback)(ui_button*, ui_mouse_state) )
-{
-
-    // TODO: Argument check
-    //
-
-    // If this is the first callback, set the max to 1 and 
-    if (button->callback.hover.max == 0)
-    {
-        button->callback.hover.max = 1;
-        button->callback.hover.callbacks = calloc(1, sizeof(void*));
-    }
-
-
-    // Simple heuristic that doubles callbacks lists length if there is no space to 
-    // store the callback pointer
-    if (button->callback.hover.count + 1 > button->callback.hover.max)
-    {
-        // Double the max
-        button->callback.hover.max *= 2;
-
-        // Allocate the maximum number of callbacks
-        void **callbacks = calloc(button->callback.hover.max, sizeof(void*)),
-              *t         = button->callback.hover.callbacks;
-
-        // Copy all the callbacks from the button to the new callback list
-        memcpy(callbacks, button->callback.hover.callbacks, button->callback.hover.count * sizeof(void *));
-
-        // Set the hover callback list pointer to the new list
-        button->callback.hover.callbacks = callbacks;
-
-        // Free the old callback list
-        free(t);
-    }
-
-    // Increment the callback counter and install the new callback
-    button->callback.hover.callbacks[button->callback.hover.count++] = callback;
-
-    // Success
-    return 1;
-
-    // TODO: Error handling
-}
-
-int add_release_callback_button ( ui_button *button, void(*callback)(ui_button*, ui_mouse_state) )
-{
-
-    // TODO: Argument check
-    //
-
-    // If this is the first callback, set the max to 1 and 
-    if (button->callback.release.max == 0)
-    {
-        button->callback.release.max = 1;
-        button->callback.release.callbacks = calloc(1, sizeof(void*));
-    }
-
-
-    // Simple heuristic that doubles callbacks lists length if there is no space to 
-    // store the callback pointer
-    if (button->callback.release.count + 1 > button->callback.release.max)
-    {
-        // Double the max
-        button->callback.release.max *= 2;
-
-        // Allocate the maximum number of callbacks
-        void** callbacks = calloc(button->callback.release.max, sizeof(void*)),
-            * t = button->callback.release.callbacks;
-
-        // Copy all the callbacks from the button to the new callback list
-        memcpy(callbacks, button->callback.release.callbacks, button->callback.release.count * sizeof(void*));
-
-        // Set the release callback list pointer to the new list
-        button->callback.release.callbacks = callbacks;
-
-        // Free the old callback list
-        free(t);
-    }
-
-    // Increment the callback counter and install the new callback
-    button->callback.release.callbacks[button->callback.release.count++] = callback;
-
-    // Success
-    return 1;
-
-    // TODO: Error handling
-}
-
-int draw_button ( ui_window *window, ui_button *button )
+int button_draw ( ui_window *p_window, ui_button *p_button )
 {
 
     // TODO: Argument check
     //
 
     // Initialized data
-    ui_instance *instance = ui_get_active_instance();
-    size_t        l        = strlen(button->label);
-    SDL_Rect      r        = { button->location.x+1, button->location.y+1, (l * 8) + 5, 12 };
+    ui_instance *p_instance = ui_get_active_instance();
+    size_t       l          = strlen(p_button->text);
+    SDL_Rect     r          = { p_button->x+1, p_button->y+1, (l * 8) + 5, 12 };
     
-    button->location.w = r.w,
-    button->location.h = r.h;
+    p_button->width = r.w,
+    p_button->height = r.h;
 
-    if ( button->depressed == false )
+    if ( p_button->depressed == false )
     {
-        SDL_SetRenderDrawColor(window->renderer, (u8)instance->accent_2, (u8)(instance->accent_2 >> 8), (u8)(instance->accent_2 >> 16), 0xff);
-        SDL_RenderDrawLine(window->renderer, r.x + r.w - 1, r.y, r.x + r.w - 1, r.y + r.h - 1);
-        SDL_RenderDrawLine(window->renderer, r.x, r.y + r.h - 1, r.x + r.w - 1, r.y + r.h - 1);
+
+        // Set the draw color
+        SDL_SetRenderDrawColor(
+            p_window->sdl2.renderer,
+            p_instance->theme.accent_2.r,
+            p_instance->theme.accent_2.g,
+            p_instance->theme.accent_2.b,
+            0xff
+        );
+        SDL_RenderDrawLine(p_window->sdl2.renderer, r.x + r.w - 1, r.y, r.x + r.w - 1, r.y + r.h - 1);
+        SDL_RenderDrawLine(p_window->sdl2.renderer, r.x, r.y + r.h - 1, r.x + r.w - 1, r.y + r.h - 1);
         r.x--, r.y--;
     }
 
-    SDL_SetRenderDrawColor(window->renderer, (u8)instance->accent_1, (u8)(instance->accent_1 >> 8), (u8)(instance->accent_1 >> 16), 0xff);
-    SDL_RenderFillRect(window->renderer, &r);
-    SDL_SetRenderDrawColor(window->renderer, (u8)instance->primary, (u8)(instance->primary >> 8), (u8)(instance->primary >> 16), 0xff);
-    SDL_RenderDrawRect(window->renderer, &r);
+    // Set the draw color
+    SDL_SetRenderDrawColor(
+        p_window->sdl2.renderer,
+        p_instance->theme.accent_1.r,
+        p_instance->theme.accent_1.g,
+        p_instance->theme.accent_1.b,
+        0xff
+    );
     
-    ui_draw_text(button->label, window, r.x + 3, r.y + 1, 1);
+    SDL_RenderFillRect(p_window->sdl2.renderer, &r);
+
+    // Set the draw color
+    SDL_SetRenderDrawColor(
+        p_window->sdl2.renderer,
+        p_instance->theme.primary.r,
+        p_instance->theme.primary.g,
+        p_instance->theme.primary.b,
+        0xff
+    );
+
+    SDL_RenderDrawRect(p_window->sdl2.renderer, &r);
+    
+    ui_draw_text(p_button->text, p_window, r.x + 3, r.y + 1, 1);
 
     // Success
     return 1;
@@ -436,41 +308,34 @@ bool button_in_bounds ( ui_button *button, ui_mouse_state mouse_state )
     //
 
     // Initialized data
-	i32  x = button->location.x,
-		 y = button->location.y,
-		 w = button->location.w,
-		 h = button->location.h;
+	i32  x = button->x,
+		 y = button->y,
+		 w = button->width,
+		 h = button->height;
 	
-	// Check for bounds
-	if (mouse_state.x >= x && mouse_state.y >= y && mouse_state.x <= x + w && mouse_state.y <= y + h)
+	// Bounds check
+	return ( mouse_state.x >= x && mouse_state.y >= y && mouse_state.x <= x + w && mouse_state.y <= y + h );
 
-        // In bounds
-		return true;
-
-    // Out of bounds
-	return false;
+    // TODO: Error check
 }
 
-int destroy_button ( ui_button *p_button )
+int button_destroy ( ui_button **const pp_button )
 {
 
     // Argument check
-    if ( p_button == (void *) 0 ) goto no_button;
-        
+    if ( pp_button == (void *) 0 ) goto no_button;
+
+    // Initialized data
+    ui_button *p_button = *pp_button;
+
+    // No more pointer for caller
+    *pp_button = (void *) 0;
+
     // Free label string
-    free(p_button->label);
-
-    // Free on click callbacks
-    free(p_button->callback.click.callbacks);
-
-    // Free on hover callbacks
-    free(p_button->callback.hover.callbacks);
-    
-    // Free on release callbacks
-    free(p_button->callback.release.callbacks);
+    UI_REALLOC(p_button->text, 0);
 
     // Free the button memory
-    free(p_button);
+    UI_REALLOC(p_button, 0);
 
     // Success
     return 1;
@@ -482,7 +347,7 @@ int destroy_button ( ui_button *p_button )
         {
             no_button:
                 #ifndef NDEBUG
-                    ui_print_error("[UI] [Button] Null pointer provided for \"p_button\" in call to function \"%s\"\n", __FUNCTION__);
+                    log_error("[ui] [button] Null pointer provided for \"pp_button\" in call to function \"%s\"\n", __FUNCTION__);
                 #endif
 
                 // Error

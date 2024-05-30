@@ -381,12 +381,19 @@ void ui_init ( void )
     {
 
         // External data
-        extern fn_element_click   label_click;
-        extern fn_element_hover   label_hover;
-        extern fn_element_release label_release;
+        extern fn_element_click   label_click,
+                                  button_click;
+        extern fn_element_hover   label_hover,
+                                  button_hover;
+        extern fn_element_release label_release,
+                                  button_release;
         
         // Initialized data
-        ui_element_info _label = 
+        ui_element_info _label  = { 0 },
+                        _button = { 0 }; 
+
+        // Label
+        _label = (ui_element_info)
         {
             .load        = (fn_element_load)        label_load_as_json_value,
             .draw        = (fn_element_draw)        label_draw,
@@ -396,9 +403,24 @@ void ui_init ( void )
             .hover       = (fn_element_hover)       label_hover,
             .release     = (fn_element_release)     label_release
         };
+
+        // Button
+        _button = (ui_element_info)
+        {
+            .load        = (fn_element_load)        button_load_as_json_value,
+            .draw        = (fn_element_draw)        button_draw,
+            .bounds      = (fn_element_bounds)      button_in_bounds,
+            .destructor  = (fn_element_destructor)  button_destroy,
+            .click       = (fn_element_click)       button_click,
+            .hover       = (fn_element_hover)       button_hover,
+            .release     = (fn_element_release)     button_release
+        };
         
         // Register the label element
         ui_element_register("LABEL", _label);
+
+        // Register the button element
+        ui_element_register("BUTTON", _button);
     }
 
     // Set the initialized flag

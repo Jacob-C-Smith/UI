@@ -36,6 +36,7 @@
 #include <ui/typedef.h>
 #include <ui/window.h>
 #include <ui/label.h>
+#include <ui/button.h>
 
 // SDL
 #include <SDL.h>

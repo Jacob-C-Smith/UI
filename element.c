@@ -52,42 +52,31 @@ int element_load_as_json_value ( ui_element **pp_element, json_value *p_value )
 {
     
     // Argument check
-    if ( p_value == (void *) 0 ) goto no_value;
+    if ( p_value       ==        (void *) 0 ) goto no_value;
+    if ( p_value->type != JSON_VALUE_OBJECT ) goto wrong_type;
 
+    // External data
+    extern dict *p_element_infos;
+    
     // Initialized data
     ui_element *p_element = (void *) 0;
-    json_value *p_type = 0;
+    dict       *p_dict    = p_value->object;
+    json_value *p_type    = dict_get(p_dict, "type");
 
-    // Get properties from the dictionary
-    if ( p_value->type == JSON_VALUE_OBJECT )
-    {
+    // Check for missing properties
+    if ( p_type == (void *) 0 ) goto missing_properties;
 
-        // Initialized data
-        dict *p_dict = p_value->object;
-
-        // Store the type
-        p_type = dict_get(p_dict, "type");
-
-        // Check for missing properties
-        if ( p_type == (void *) 0 ) goto missing_properties;
-    }
+    // Type check
+    if ( p_type->type != JSON_VALUE_STRING ) goto wrong_type_type;
 
     // Allocate memory for the element
     element_create(&p_element);
 
-    // Construct the element
-    if ( p_type->type == JSON_VALUE_STRING )
-    {
-        
-        // External data
-        extern dict *p_element_infos;
+    // Store the element constructor
+    p_element->p_functions = dict_get(p_element_infos, p_type->string);
 
-        p_element->p_functions = dict_get(p_element_infos, p_type->string);
-
-        // Call the element constructor
-        // TODO: Error check
-        p_element->p_functions->load(&p_element->p_element, p_value);
-    }
+    // Call the element constructor
+    if ( p_element->p_functions->load(&p_element->p_element, p_value) == (void *) 0 ) goto failed_to_construct_element;
 
     // Return a pointer to the caller
     *pp_element = p_element;
@@ -96,8 +85,11 @@ int element_load_as_json_value ( ui_element **pp_element, json_value *p_value )
     return 1;
 
     missing_properties:
+    failed_to_construct_element:
     no_name:
     no_type:
+    wrong_type_type:
+    wrong_type:
         return 0;
 
     // Error handling
@@ -118,7 +110,7 @@ int element_load_as_json_value ( ui_element **pp_element, json_value *p_value )
         {
             out_of_memory:
                 #ifndef NDEBUG
-                    log_error("[Standard library] Failed to allocate memory in call to function \"%s\"\n", __FUNCTION__);
+                    log_error("[standard library] Failed to allocate memory in call to function \"%s\"\n", __FUNCTION__);
                 #endif
 
                 // Error
@@ -129,7 +121,7 @@ int element_load_as_json_value ( ui_element **pp_element, json_value *p_value )
         {
             not_implemented:
                 #ifndef NDEBUG
-                    log_error("[UI] [Element] Failed to call constructor for type \"%s\" in call to function \"%s\"\n", p_type->string, __FUNCTION__);
+                    log_error("[ui] [element] Failed to call constructor for type \"%s\" in call to function \"%s\"\n", p_type->string, __FUNCTION__);
                 #endif
 
                 // Error
@@ -138,7 +130,7 @@ int element_load_as_json_value ( ui_element **pp_element, json_value *p_value )
     }
 }
 
-int destroy_element(ui_element **pp_element)
+int destroy_element ( ui_element **pp_element )
 {
 
     // Argument check
@@ -147,8 +139,11 @@ int destroy_element(ui_element **pp_element)
     // Initialized data
     ui_element *p_element = *pp_element;
     
+    // Call the element destructor
+    if ( p_element->p_functions->destructor(&p_element->p_element) == 0 ) goto failed_to_free;
+
     // Cleanup
-    UI_REALLOC(p_element, 0);
+    if ( UI_REALLOC(p_element, 0) ) goto failed_to_free;
 
     // Success
     return 1;
@@ -160,7 +155,18 @@ int destroy_element(ui_element **pp_element)
         {
             no_element:
                 #ifndef NDEBUG
-                    printf("[UI] [Element] Null pointer provided for \"pp_element\" in call to function \"%s\"\n", __FUNCTION__);
+                    log_error("[ui] [element] Null pointer provided for \"pp_element\" in call to function \"%s\"\n", __FUNCTION__);
+                #endif
+
+                // Error
+                return 0;
+        }
+
+        // Standard library errors
+        {
+            failed_to_free:
+                #ifndef NDEBUG
+                    log_error("[ui] [element] Failed to free memory in call to function \"%s\"\n", __FUNCTION__);
                 #endif
 
                 // Error
